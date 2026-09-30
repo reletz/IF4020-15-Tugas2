@@ -33,8 +33,13 @@ tambahan dari spek
 
 ### 2. Coba dirumusin
 - ambil Cpp
-  - inti cipher tulis gaya C aja (uint8_t, array, ga usah class)
+  - inti cipher: operasi per blok tetap gaya C (uint8_t, array, tanpa alokasi)
+  - dibungkus interface `BlockCipher` (encrypt_block/decrypt_block) + `CustomCipher`
+    -> mode ECB/CBC/CFB/OFB/CTR cukup nerima `BlockCipher&`, ga peduli cipher-nya apa
   - I/O file, padding, CLI pake vector/string biar ga ribet malloc
+  - dokumentasi API (bonus): komentar Doxygen (`///`, `@param`, `@code`) di header
+    jadi sumber utama, `docs/api.md` isinya overview, format output, contoh, catatan
+    -> hosting di markdown-website sendiri, ga perlu generate HTML Doxygen
 - 64 bit kedikitan, rentan kolisi di CBC jika data >= 32GB -> [birthday attack](https://sweet32.info/). harusnya 128 aman
   - kunci minimal = blok -> kunci 128 bit juga
 - pake feistel 2 cabang -> jawaban buat problem di bagian 0
