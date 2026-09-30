@@ -4,6 +4,9 @@ euh kurang lebih gini cipher blocknya
 Bikin Block Cipher
 Karena ini enkripsi: kalau plaintext diacak jadi ciphertext, yang nerima harus bisa kembaliin persis.
 
+Alurnya:
+File input -> Padding -> Slice per n byte (bikin 1 blok, 8 x n bit) -> (pilih mode <-> encrypt_block) -> output
+
 Cara naif: bikin E(P) = C, terus buat dekripsi butuh E^-1(C) = P
 -> masalahnya SETIAP langkah di E harus bisa dibalik
 -> repot, dan banyak operasi, yg ngacak banget, justru gabisa dibalik (misal buang bit, loop yg nyimpen state)
@@ -45,14 +48,13 @@ tambahan dari spek
     (XOR 2x pake angka yg sama = balik lagi, contoh: 5 (XOR) 3 (XOR) 3 = 5)
   - jadi F ga perlu dibalik, cukup dihitung ulang
     -> F boleh seribet apa aja
-  - loop ini nyimpen state (acc, feedback) -> susah dibalik ->  harus pake feistel
   - dekripsi pake kode yg sama kaya enkripsi, cuma kuncinya dipake dari belakang
 
 ### 3. Isi F (idenya)
 - F = niru cara kerja sigma-delta (ΣΔ) di ADC audio
-  - jalan per word satu-satu, sambil bawa "tabungan" (acc):
+  - jalan per word satu-satu, sambil bawa "tabungan" (acc)
       acc = acc + (x - feedback)      -> tambah-tambahan mod 2^32
-      q   = S(acc XOR K)              -> lewat S-box, kunci ikut masuk
+      q   = S(acc XOR K_i[j])         -> lewat S-box, kunci ikut masuk. (S-box 8 bit, acc 32 bit -> S-box dipake ke 4 byte acc satu-satu)
       feedback = q                    -> hasilnya dipake buat word berikutnya
   - jadi tiap word hasilnya kepengaruh semua word sebelumnya
 - loop ini nyimpen state (acc, feedback) -> susah dibalik -> makanya harus pake feistel
@@ -62,3 +64,34 @@ tambahan dari spek
   - bit paling kanan hasil penjumlahan itu gampang ditebak (sama aja kaya XOR biasa)
     -> tambahin rotasi antar word biar bitnya pindah posisi
 - abis itu: permutasi bit (transposisi)
+
+### 4. Alur akhirnya
+
+File input -> Padding -> Slice per 16 byte (1 blok = 128 bit) -> (mode <-> encrypt_block) -> output (IV + ciphertext + tag MAC)
+
+Rancangan encrypt_block:
+- input: 1 blok (16 byte) + round key K_0 ... K_15
+- round key dibikin sekali di awal dari master key (key schedule), bukan per blok
+  - master key (128 bit) -> rotasi + XOR konstanta φ tiap putaran -> K_0 ... K_15 (masing2 64 bit)
+  - detail persisnya: ntaran dah
+
+- langkah:
+  1. belah blok: L = 8 byte kiri, R = 8 byte kanan
+  2. ulang 16x (i = 0 ... 15):
+       L_baru = R
+       R_baru = L XOR F(R, K_i)
+  3. setelah round terakhir, tuker L sama R sekali lagi
+     (biar decrypt_block bisa pake kode yg sama)
+  4. gabung L + R -> 16 byte ciphertext
+
+- isi F(R, K_i) (lihat bagian 3):
+  1. R dipecah jadi 2 word (32 bit)
+  2. pass maju ΣΔ: word 0 -> word 1, pake K_i[0], K_i[1]
+  3. rotasi antar word
+  4. pass mundur ΣΔ: word 1 -> word 0
+  5. permutasi bit
+  6. hasil: 64 bit
+
+Rancangan decrypt_block:
+- sama persis kaya encrypt_block
+- bedanya cuma urutan kunci: K_15, K_14, ... K_0
