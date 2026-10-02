@@ -2,7 +2,6 @@ euh kurang lebih gini cipher blocknya
 
 ### 0. Problem statement
 Bikin Block Cipher
-Karena ini enkripsi: kalau plaintext diacak jadi ciphertext, yang nerima harus bisa kembaliin persis.
 
 Alurnya:
 File input -> Padding -> Slice per n byte (bikin 1 blok, 8 x n bit) -> (pilih mode <-> encrypt_block) -> output
@@ -56,7 +55,7 @@ tambahan dari spek
   - dekripsi pake kode yg sama kaya enkripsi, cuma kuncinya dipake dari belakang
 
 ### 3. Isi F (idenya)
-- F = niru cara kerja sigma-delta (ΣΔ) di ADC audio
+- F = niru cara kerja sigma-delta (ΣΔ) di DAC audio
   - jalan per word satu-satu, sambil bawa "tabungan" (acc)
       acc = acc + (x - feedback)      -> tambah-tambahan mod 2^32
       q   = S(acc XOR K_i[j])         -> lewat S-box, kunci ikut masuk. (S-box 8 bit, acc 32 bit -> S-box dipake ke 4 byte acc satu-satu)
@@ -100,3 +99,35 @@ Rancangan encrypt_block:
 Rancangan decrypt_block:
 - sama persis kaya encrypt_block
 - bedanya cuma urutan kunci: K_15, K_14, ... K_0
+
+### 5. Bedain mode, E, sama F (biar ga ketuker)
+ada 3 level, dari luar ke dalam:
+
+```
+plaintext -> padding -> slice 16 byte -> [MODE] -> E (encrypt_block) -> ciphertext
+                                                   └─ 16 round feistel
+                                                       └─ F(R, K_i) tiap round
+```
+
+- MODE (ECB/CBC/CFB/OFB/CTR)
+  - cuma ngatur gimana blok-blok disambung (chaining, feedback, counter)
+  - ga peduli isi cipher, cukup manggil `encrypt_block` / `decrypt_block`
+  - yg ngurus IV / counter awal
+- E = `encrypt_block` / `decrypt_block`
+  - cipher blok lengkap: 1 blok (16 byte) masuk, 1 blok keluar
+  - isinya 16 round feistel (bagian 4)
+  - dipanggil sekali per blok, sama mode
+- F = round function
+  - ada DI DALAM E, dipanggil 16x per blok (sekali per round)
+  - ga perlu dibalik, cukup dihitung ulang (bagian 2)
+
+yg sering ketuker:
+- mode ga manggil F, mode manggil E, E yg manggil F
+- di laporan pake nama beda: E buat cipher blok, F buat round function
+- CFB/OFB/CTR selalu manggil `encrypt_block` (bahkan pas dekripsi), cuma ECB sama CBC yg butuh `decrypt_block`
+
+alur dari sisi user:
+- input: plaintext, master key, mode, IV/counter
+- master key -> key schedule -> K_0 ... K_15 (sekali di awal, bukan per blok)
+- plaintext -> padding -> slice 16 byte -> mode(E) -> output IV + ciphertext + tag MAC
+- dekripsi: cek tag MAC dulu, baru dekripsi
