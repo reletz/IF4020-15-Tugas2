@@ -10,7 +10,12 @@ SRC_DIR  := src
 CORE_DIR := $(SRC_DIR)/core
 UTIL_DIR := $(SRC_DIR)/util
 
-.PHONY: test test-util test-mac test-container clean
+APP_BIN  := cipher_cli
+
+.PHONY: app test test-util test-mac test-container clean
+
+app:
+	$(CXX) $(CXXFLAGS) $(CORE_DIR)/*.cpp $(UTIL_DIR)/*.cpp src/ops/mac.cpp src/ops/container.cpp src/main.cpp -o $(APP_BIN)
 
 ifeq ($(OS),Windows_NT)
     EXE := .exe
@@ -100,4 +105,4 @@ test-container:
 	rm -f ./$(TEST_CONTAINER_BIN)
 
 clean:
-	rm -f $(TEST_BIN) $(TEST_UTIL_BIN) $(TEST_MAC_BIN) $(TEST_CONTAINER_BIN)
+	rm -f $(TEST_BIN) $(TEST_UTIL_BIN) $(TEST_MAC_BIN) $(TEST_CONTAINER_BIN) $(APP_BIN)
