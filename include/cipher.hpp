@@ -50,7 +50,7 @@ public:
  * Blok 128 bit dibelah menjadi L dan R (masing-masing 64 bit). Tiap round:
  * @code
  * L' = R
- * R' = L xor F(R, K_i)
+ * R' = L xor F(R, K[i])
  * @endcode
  * Dekripsi memakai alur yang sama dengan urutan round key dibalik, 
  * sehingga F tidak perlu punya invers.
@@ -84,7 +84,7 @@ public:
     void decrypt_block(const uint8_t *in, uint8_t *out) const override;
 
 private:
-    uint64_t rk_[ROUNDS];  ///< Round key K_0 ... K_15, masing-masing 64 bit.
+    uint64_t rk_[ROUNDS];  ///< Round key K[0] ... K[15], masing-masing 64 bit.
 };
 
 #endif
