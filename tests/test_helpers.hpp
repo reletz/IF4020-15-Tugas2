@@ -12,9 +12,6 @@
 
 namespace test {
 
-/**
- * @brief Singleton runner untuk tracking status pengujian (passed/failed).
- */
 class TestRunner {
 public:
     static TestRunner& instance() {
@@ -44,11 +41,7 @@ public:
 
     size_t passed() const { return passed_; }
     size_t failed() const { return failed_; }
-
-    void reset() {
-        passed_ = 0;
-        failed_ = 0;
-    }
+    void reset() { passed_ = 0; failed_ = 0; }
 
 private:
     TestRunner() = default;
@@ -60,12 +53,7 @@ inline int report() {
     return TestRunner::instance().report();
 }
 
-/**
- * @brief RAII helper untuk mengelola direktori sementara pengujian.
- *
- * Menggunakan $TMPDIR (fallback ke /tmp) dan mkdtemp().
- * Menghapus seluruh direktori sementara beserta isinya secara rekursif saat objek dimusnahkan.
- */
+// RAII temporary directory helper for isolated test I/O
 class TempDir {
 public:
     TempDir() {
@@ -86,38 +74,18 @@ public:
     }
 
     ~TempDir() {
-        cleanup();
+        if (!path_.empty()) {
+            std::error_code ec;
+            std::filesystem::remove_all(path_, ec);
+        }
     }
 
     TempDir(const TempDir&) = delete;
     TempDir& operator=(const TempDir&) = delete;
 
-    TempDir(TempDir&& other) noexcept : path_(std::move(other.path_)) {
-        other.path_.clear();
-    }
-
-    TempDir& operator=(TempDir&& other) noexcept {
-        if (this != &other) {
-            cleanup();
-            path_ = std::move(other.path_);
-            other.path_.clear();
-        }
-        return *this;
-    }
-
-    const std::string& path() const {
-        return path_;
-    }
+    const std::string& path() const { return path_; }
 
 private:
-    void cleanup() {
-        if (!path_.empty()) {
-            std::error_code ec;
-            std::filesystem::remove_all(path_, ec);
-            path_.clear();
-        }
-    }
-
     std::string path_;
 };
 
