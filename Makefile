@@ -2,12 +2,13 @@ CXX      ?= g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic -Iinclude
 OPTFLAGS := -O2
 
-SRC_DIR   := src
-CORE_DIR  := $(SRC_DIR)/core
-BUILD_DIR := build
-CORE_SRCS := $(wildcard $(CORE_DIR)/*.cpp)
+TEST_BIN := test_roundtrip
+TEST_UTIL_BIN := test_util
+SRC_DIR  := src
+CORE_DIR := $(SRC_DIR)/core
+UTIL_DIR := $(SRC_DIR)/util
 
-TESTS := test_roundtrip test_permutation
+.PHONY: test test-util clean
 
 ifeq ($(OS),Windows_NT)
     EXE := .exe
@@ -81,5 +82,10 @@ $(BUILD_DIR)/analyze_sbox$(EXE): $(CORE_DIR)/sbox.cpp $(CORE_DIR)/sbox_table.inc
 analyze: $(BUILD_DIR)/analyze_sbox$(EXE)
 	@$(call run,$<)
 
+test-util:
+	$(CXX) $(CXXFLAGS) -Itests $(UTIL_DIR)/*.cpp tests/test_util.cpp -o $(TEST_UTIL_BIN)
+	./$(TEST_UTIL_BIN)
+	rm -f ./$(TEST_UTIL_BIN)
+
 clean:
-	-$(RMDIR)
+	rm -f $(TEST_BIN) $(TEST_UTIL_BIN)
