@@ -92,6 +92,13 @@ for m in "${MODES[@]}"; do
     pass "Multi-megabyte (2 MiB) round-trip in $m mode"
 done
 
+# 1e. Inline text (-t) and custom IV (--iv)
+CUSTOM_IV="0102030405060708090a0b0c0d0e0f10"
+"$CLI" encrypt -m cbc -k "$KEY" --iv "$CUSTOM_IV" -t "Kriptografi IF4020 Inline Test" -o "$TMP_DIR/inline.enc" >/dev/null
+"$CLI" decrypt -k "$KEY" -i "$TMP_DIR/inline.enc" -o "$TMP_DIR/inline.dec" >/dev/null
+[ "$(cat "$TMP_DIR/inline.dec")" = "Kriptografi IF4020 Inline Test" ]
+pass "Inline plaintext (-t) and custom IV (--iv) round-trip"
+
 echo "=== 2. Benchmark (16 MiB Random Binary) ==="
 BENCH16="$TMP_DIR/16mb.bin"
 dd if=/dev/urandom of="$BENCH16" bs=1048576 count=16 2>/dev/null

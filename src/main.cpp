@@ -22,31 +22,35 @@ struct IoError  : std::runtime_error { using std::runtime_error::runtime_error; 
 
 void print_help(std::ostream& os = std::cout) {
     os << "Usage:\n"
-       << "  cipher_cli encrypt [-f|--force] -m <mode> (-k <32 hex> | --key-file <path>) -i <in> -o <out>\n"
+       << "  cipher_cli encrypt [-f|--force] -m <mode> (-k <32 hex> | --key-file <path>) [--iv <32 hex>] (-i <in> | -t <text>) -o <out>\n"
        << "  cipher_cli decrypt [-f|--force] (-k <32 hex> | --key-file <path>) -i <in> -o <out>\n"
        << "  cipher_cli keygen  [-f|--force] -o <path>\n"
        << "  cipher_cli -h | --help\n\n"
        << "Commands:\n"
-       << "  encrypt    Encrypt a file into an authenticated container (v1).\n"
+       << "  encrypt    Encrypt a file or inline text into an authenticated container (v1).\n"
        << "  decrypt    Verify integrity and decrypt an authenticated container.\n"
        << "  keygen     Generate a random 128-bit key (32 hex characters) with mode 0600.\n\n"
        << "Options:\n"
        << "  -m <mode>          Cipher mode: ecb, cbc, cfb, ofb, ctr (encrypt only)\n"
        << "  -k <32 hex>        Provide 128-bit key directly as 32 hex characters\n"
        << "  --key-file <path>  Read 128-bit key from file (recommended over -k to avoid leaking keys)\n"
+       << "  --iv <32 hex>      Custom 16-byte IV/Counter in hex (optional for encrypt, defaults to random)\n"
        << "  -i <path>          Input file path\n"
+       << "  -t, --text <str>   Inline plaintext string input (encrypt only)\n"
        << "  -o <path>          Output file path\n"
        << "  -f, --force        Overwrite output file if it already exists\n"
        << "  -h, --help         Show this help message\n\n"
        << "Examples:\n"
        << "  1. Generate key file:\n"
        << "     cipher_cli keygen -o secret.key\n\n"
-       << "  2. Encrypt using key file:\n"
+       << "  2. Encrypt a file:\n"
        << "     cipher_cli encrypt -m cbc --key-file secret.key -i file.pdf -o file.enc\n\n"
-       << "  3. Decrypt using key file (mode is auto-detected from header):\n"
-       << "     cipher_cli decrypt --key-file secret.key -i file.enc -o file.pdf\n\n"
-       << "  4. Encrypt using raw 32-hex key directly:\n"
-       << "     cipher_cli encrypt -m ctr -k 00112233445566778899aabbccddeeff -i file.txt -o file.enc\n";
+       << "  3. Encrypt inline text directly:\n"
+       << "     cipher_cli encrypt -m cbc --key-file secret.key -t \"Pesan rahasia\" -o secret.enc\n\n"
+       << "  4. Encrypt with custom IV:\n"
+       << "     cipher_cli encrypt -m ctr -k 00112233445566778899aabbccddeeff --iv 0102030405060708090a0b0c0d0e0f10 -t \"test\" -o test.enc\n\n"
+       << "  5. Decrypt using key file (mode is auto-detected from header):\n"
+       << "     cipher_cli decrypt --key-file secret.key -i file.enc -o file.pdf\n";
 }
 
 void load_key(std::string& k_hex, const std::string& k_file, uint8_t key[KEY_SIZE]) {
@@ -84,24 +88,16 @@ void load_key(std::string& k_hex, const std::string& k_file, uint8_t key[KEY_SIZ
     util::secure_zero(hex.data(), hex.size());
 }
 
-void validate_paths(const std::string& in, const std::string& out, bool force) {
-    if (in.empty()) throw CliError("Missing required option: -i <in>");
+void validate_output_path(const std::string& out, bool force) {
     if (out.empty()) throw CliError("Missing required option: -o <out>");
     std::error_code ec;
-    if (fs::exists(in, ec) && fs::exists(out, ec) && fs::equivalent(in, out, ec)) {
-        throw CliError("Input and output resolve to the same canonical path: " + in);
-    }
     if (!force && fs::exists(out, ec)) {
         throw CliError("Output file '" + out + "' already exists. Use -f or --force to overwrite.");
     }
 }
 
 void do_keygen(const std::string& out, bool force) {
-    if (out.empty()) throw CliError("Missing required option: -o <path>");
-    std::error_code ec;
-    if (!force && fs::exists(out, ec)) {
-        throw CliError("Output file '" + out + "' already exists. Use -f or --force to overwrite.");
-    }
+    validate_output_path(out, force);
 
     uint8_t key[KEY_SIZE];
     util::secure_random(key, KEY_SIZE);
@@ -114,12 +110,14 @@ void do_keygen(const std::string& out, bool force) {
         throw IoError("Failed to create key file '" + out + "': " + std::strerror(errno));
     }
     ::fchmod(fd, S_IRUSR | S_IWUSR);
+
     ssize_t written = ::write(fd, hex_str.data(), hex_str.size());
     int write_err = errno;
     ::close(fd);
     util::secure_zero(hex_str.data(), hex_str.size());
 
     if (written < 0 || static_cast<size_t>(written) != 33) {
+        std::error_code ec;
         fs::remove(out, ec);
         throw IoError("Failed to write key file '" + out + "': " + std::strerror(write_err));
     }
@@ -127,18 +125,40 @@ void do_keygen(const std::string& out, bool force) {
 }
 
 void do_cipher(bool encrypt, const std::string& mode_str, std::string& k_hex,
-               const std::string& k_file, const std::string& in_path, const std::string& out_path, bool force) {
-    validate_paths(in_path, out_path, force);
+               const std::string& k_file, const std::string& in_path, const std::string& in_text,
+               const std::string& iv_hex, const std::string& out_path, bool force) {
+    validate_output_path(out_path, force);
+
+    if (encrypt) {
+        if (in_path.empty() == in_text.empty()) {
+            throw CliError("Specify exactly one input source: -i <path> or -t/--text <string>");
+        }
+    } else {
+        if (!in_text.empty()) throw CliError("Option -t/--text is only valid for encrypt");
+        if (!iv_hex.empty()) throw CliError("Option --iv is only valid for encrypt (mode & IV are read from container)");
+        if (in_path.empty()) throw CliError("Missing required option: -i <in>");
+    }
+
+    if (!in_path.empty()) {
+        std::error_code ec;
+        if (fs::exists(in_path, ec) && fs::exists(out_path, ec) && fs::equivalent(in_path, out_path, ec)) {
+            throw CliError("Input and output resolve to the same canonical path: " + in_path);
+        }
+    }
 
     uint8_t key[KEY_SIZE] = {0};
     load_key(k_hex, k_file, key);
 
     util::Bytes in_data;
-    try {
-        in_data = util::read_file(in_path);
-    } catch (const std::exception& e) {
-        util::secure_zero(key, sizeof(key));
-        throw IoError(e.what());
+    if (!in_text.empty()) {
+        in_data.assign(in_text.begin(), in_text.end());
+    } else {
+        try {
+            in_data = util::read_file(in_path);
+        } catch (const std::exception& e) {
+            util::secure_zero(key, sizeof(key));
+            throw IoError(e.what());
+        }
     }
 
     SecureEnvelope env(key);
@@ -153,7 +173,23 @@ void do_cipher(bool encrypt, const std::string& mode_str, std::string& k_hex,
         } catch (const std::exception&) {
             throw CliError("Unsupported mode: '" + mode_str + "'. Supported modes: ecb, cbc, cfb, ofb, ctr");
         }
-        out_data = env.seal(in_data, mode);
+
+        uint8_t iv_bytes[BLOCK_SIZE];
+        const uint8_t* iv_ptr = nullptr;
+        if (!iv_hex.empty()) {
+            if (iv_hex.size() != 32) throw CliError("Invalid IV: must be exactly 32 hexadecimal characters (16 bytes)");
+            try {
+                auto raw_iv = util::from_hex(iv_hex);
+                std::memcpy(iv_bytes, raw_iv.data(), BLOCK_SIZE);
+                iv_ptr = iv_bytes;
+            } catch (const std::exception&) {
+                throw CliError("Invalid IV: contains non-hexadecimal characters");
+            }
+        }
+
+        out_data = env.seal(in_data, mode, iv_ptr);
+        if (iv_ptr) util::secure_zero(iv_bytes, sizeof(iv_bytes));
+
     } else {
         if (!mode_str.empty()) throw CliError("Option -m is not allowed for decrypt (mode is auto-detected)");
         out_data = env.open(in_data);
@@ -192,7 +228,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    std::string mode, key_hex, key_file, in_file, out_file;
+    std::string mode, key_hex, key_file, in_file, in_text, iv_hex, out_file;
     bool force = false;
 
     try {
@@ -215,8 +251,12 @@ int main(int argc, char* argv[]) {
                 util::secure_zero(argv[i], std::strlen(argv[i]));
             } else if (arg == "--key-file") {
                 key_file = need_val("--key-file");
+            } else if (arg == "--iv") {
+                iv_hex = need_val("--iv");
             } else if (arg == "-i") {
                 in_file = need_val("-i");
+            } else if (arg == "-t" || arg == "--text") {
+                in_text = need_val("-t/--text");
             } else if (arg == "-o") {
                 out_file = need_val("-o");
             } else {
@@ -225,11 +265,12 @@ int main(int argc, char* argv[]) {
         }
 
         if (cmd == "encrypt") {
-            do_cipher(true, mode, key_hex, key_file, in_file, out_file, force);
+            do_cipher(true, mode, key_hex, key_file, in_file, in_text, iv_hex, out_file, force);
         } else if (cmd == "decrypt") {
-            do_cipher(false, mode, key_hex, key_file, in_file, out_file, force);
+            do_cipher(false, mode, key_hex, key_file, in_file, in_text, iv_hex, out_file, force);
         } else if (cmd == "keygen") {
-            if (!mode.empty() || !key_hex.empty() || !key_file.empty() || !in_file.empty()) {
+            if (!mode.empty() || !key_hex.empty() || !key_file.empty() || !in_file.empty() ||
+                !in_text.empty() || !iv_hex.empty()) {
                 throw CliError("keygen accepts only [-f|--force] and -o <path>");
             }
             do_keygen(out_file, force);

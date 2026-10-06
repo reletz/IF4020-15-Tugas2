@@ -163,10 +163,16 @@ SecureEnvelope::SecureEnvelope(DerivedKeys keys)
     util::secure_zero(keys.mac, sizeof(keys.mac));
 }
 
-util::Bytes SecureEnvelope::seal(const util::Bytes& plaintext, Mode mode) const {
+util::Bytes SecureEnvelope::seal(const util::Bytes& plaintext, Mode mode, const uint8_t* custom_iv) const {
     const auto& handler = get_handler(mode);
     uint8_t iv[BLOCK_SIZE] = {0};
-    if (mode != Mode::ECB) util::secure_random(iv, BLOCK_SIZE);
+    if (mode != Mode::ECB) {
+        if (custom_iv) {
+            std::memcpy(iv, custom_iv, BLOCK_SIZE);
+        } else {
+            util::secure_random(iv, BLOCK_SIZE);
+        }
+    }
 
     util::Bytes payload = handler.requires_padding ? pad_pkcs7(plaintext) : plaintext;
     util::Bytes ciphertext = handler.encrypt(enc_cipher_, iv, payload);
