@@ -1,0 +1,81 @@
+\documentclass[12pt,a4paper]{article}
+\input{preamble}
+
+\newcommand{\algname}{NAMA\_ALGORITMA}
+\newcommand{\repourl}{https://github.com/USERNAME/REPO}
+\newcommand{\videourl}{https://youtu.be/XXXXXXXX}
+\newcommand{\tahun}{2026}
+
+\newcommand{\anggotaA}{Dita Maheswari}
+\newcommand{\nimA}{13523125}
+\newcommand{\fotoA}{foto1.jpg}
+\newcommand{\anggotaB}{Naufarrel Zhafif Abhista}
+\newcommand{\nimB}{13523149}
+\newcommand{\fotoB}{foto2.jpg}
+\newcommand{\anggotaC}{I Made Wiweka Putera}
+\newcommand{\nimC}{13523156}
+\newcommand{\fotoC}{foto3.jpg}
+\newcommand{\anggotaD}{Hasri Fayadh Muqaffa}
+\newcommand{\nimD}{13523160}
+\newcommand{\fotoD}{foto4.jpg}
+
+\begin{document}
+
+% ====================================================================
+% COVER
+% ====================================================================
+\begin{titlepage}
+  \centering
+  {\large\bfseries LAPORAN TUGAS BESAR 2\par}
+  {\large\bfseries IF4020 KRIPTOGRAFI\par}
+  \vspace{1cm}
+  {\Huge\bfseries \algname\par}
+  \vspace{0.4cm}
+  {\large Perancangan dan Implementasi Block Cipher Modern\par}
+  \vspace{1.2cm}
+
+  \vfill
+  {\large\bfseries Program Studi Teknik Informatika\\
+  Sekolah Teknik Elektro dan Informatika\\
+  Institut Teknologi Bandung\\
+  \tahun\par}
+\end{titlepage}
+
+% ====================================================================
+% PERNYATAAN
+% ====================================================================
+\pagenumbering{roman}
+\section*{Pernyataan}
+\addcontentsline{toc}{section}{Pernyataan}
+
+\noindent Tugas dan laporan ini disusun sepenuhnya tanpa bantuan kecerdasan buatan
+(Generative AI), melainkan hasil pemikiran dan analisis mandiri.
+
+\vspace{1cm}
+\noindent
+\ttd{\anggotaA}{\nimA}\hfill
+\ttd{\anggotaB}{\nimB}
+
+\vspace{1.5cm}
+\noindent
+\ttd{\anggotaC}{\nimC}\hfill
+\ttd{\anggotaD}{\nimD}
+
+\newpage
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+% ====================================================================
+% ISI
+% ====================================================================
+\input{sections/bab1-pendahuluan}
+\input{sections/bab2-dasar-teori}
+\input{sections/bab3-perancangan}
+\input{sections/bab4-implementasi}
+\input{sections/bab5-analisis}
+\input{sections/bab6-kesimpulan}
+\input{sections/pustaka}
+\input{sections/lampiran}
+
+\end{document}

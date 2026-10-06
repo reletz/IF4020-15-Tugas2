@@ -1,6 +1,7 @@
 // src/core/cipher.cpp (DUMMY)
 #include "cipher.hpp"
 #include "round.hpp"
+#include "key_schedule.hpp"
 
 static uint64_t load64(const uint8_t* p){
     uint64_t v = 0;
@@ -13,10 +14,7 @@ static void store64(uint8_t *p, uint64_t v){
 }
 
 CustomCipher::CustomCipher(const uint8_t master_key[KEY_SIZE]) {
-    uint64_t k = load64(master_key);
-    for (size_t i = 0; i < ROUNDS; i++) rk_[i] = k;
-
-    // sementara aja, round key = 1st half of master key
+    key_schedule(load64(master_key), load64(master_key+8), rk_);
 }
 
 void CustomCipher::encrypt_block(const uint8_t *in, uint8_t *out) const {

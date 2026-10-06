@@ -1,0 +1,56 @@
+% Package dan pengaturan umum. Konfigurasi/cover ada di main.tex.
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[indonesian]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+
+\graphicspath{{figures/}}
+\setstretch{1.15}
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{IF4020 Kriptografi}
+\fancyhead[R]{Tugas 2: \algname}
+\fancyfoot[C]{\thepage}
+
+% Foto anggota; jika file belum ada, tampil kotak placeholder
+\newcommand{\foto}[1]{%
+  \IfFileExists{figures/#1}{\includegraphics[width=3cm,height=4cm,keepaspectratio]{#1}}%
+  {\fbox{\parbox[c][4cm][c]{3cm}{\centering\small Foto\\(#1)}}}}
+
+% Sel anggota di cover: nama, NIM, file foto
+\newcommand{\anggotacell}[3]{%
+  \begin{minipage}[t]{0.45\textwidth}\centering
+    \foto{#3}\\[2pt] {\bfseries #1}\\ #2
+  \end{minipage}}
+
+% Blok tanda tangan: nama, NIM
+\newcommand{\ttd}[2]{%
+  \begin{minipage}[t]{0.45\textwidth}\centering
+    \vspace{2.5cm}\rule{0.8\linewidth}{0.4pt}\\ #1 (#2)
+  \end{minipage}}

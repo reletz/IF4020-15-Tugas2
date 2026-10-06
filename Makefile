@@ -1,45 +1,98 @@
-CXX      := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic -Iinclude
+CXX      ?= g++
+CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests
+OPTFLAGS := -O2
 
-TEST_BIN := test_roundtrip
-TEST_UTIL_BIN := test_util
-TEST_MAC_BIN := test_mac
-TEST_CONTAINER_BIN := test_container
-SRC_DIR  := src
-CORE_DIR := $(SRC_DIR)/core
-UTIL_DIR := $(SRC_DIR)/util
+SRC_DIR   := src
+CORE_DIR  := $(SRC_DIR)/core
+BUILD_DIR := build
+APP_NAME  := cipher_cli
+SBOX_INC  := $(CORE_DIR)/sbox_table.inc
 
-APP_BIN  := cipher_cli
+LIB_SRCS   := $(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/*/*.cpp))
+TEST_NAMES := $(basename $(notdir $(wildcard tests/test_*.cpp)))
+RUN_TESTS  := $(addprefix run-,$(TEST_NAMES))
 
-.PHONY: app test test-util test-mac test-container test-e2e test-d clean
+ifeq ($(OS),Windows_NT)
+    EXE := .exe
+    ifneq ($(findstring cmd,$(SHELL)),)
+        WIN_CMD := 1
+    endif
+else
+    EXE :=
+endif
 
-app:
-	$(CXX) $(CXXFLAGS) $(CORE_DIR)/*.cpp $(UTIL_DIR)/*.cpp src/ops/mac.cpp src/ops/container.cpp src/main.cpp -o $(APP_BIN)
+ifdef WIN_CMD
+    fixpath = $(subst /,\,$1)
+    MKDIR   = if not exist $(call fixpath,$@) mkdir $(call fixpath,$@)
+    RMDIR   = if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+    MV      = move /Y $(call fixpath,$1) $(call fixpath,$2) > nul
+    run     = $(call fixpath,$1)
+    RM      = if exist $(call fixpath,$1) del /F /Q $(call fixpath,$1)
+else
+    fixpath = $1
+    MKDIR   = mkdir -p $@
+    RMDIR   = rm -rf $(BUILD_DIR)
+    MV      = mv -f $1 $2
+    run     = ./$1
+    RM      = rm -f $1
+endif
 
-test:
-	$(CXX) $(CXXFLAGS) $(CORE_DIR)/*.cpp tests/test_roundtrip.cpp -o $(TEST_BIN)
-	./$(TEST_BIN)
-	rm -f ./$(TEST_BIN)
+.PHONY: all app test avalanche sac sbox analyze clean $(RUN_TESTS) test-util test-mac test-container test-e2e test-d
 
-test-util:
-	$(CXX) $(CXXFLAGS) -Itests $(UTIL_DIR)/*.cpp tests/test_util.cpp -o $(TEST_UTIL_BIN)
-	./$(TEST_UTIL_BIN)
-	rm -f ./$(TEST_UTIL_BIN)
+all: app
 
-test-mac:
-	$(CXX) $(CXXFLAGS) -Itests $(CORE_DIR)/*.cpp $(UTIL_DIR)/*.cpp src/ops/mac.cpp tests/test_mac.cpp -o $(TEST_MAC_BIN)
-	./$(TEST_MAC_BIN)
-	rm -f ./$(TEST_MAC_BIN)
+$(BUILD_DIR):
+	$(MKDIR)
 
-test-container:
-	$(CXX) $(CXXFLAGS) -Itests $(CORE_DIR)/*.cpp $(UTIL_DIR)/*.cpp src/ops/mac.cpp src/ops/container.cpp tests/test_container.cpp -o $(TEST_CONTAINER_BIN)
-	./$(TEST_CONTAINER_BIN)
-	rm -f ./$(TEST_CONTAINER_BIN)
+app: $(BUILD_DIR)/$(APP_NAME)$(EXE)
+	@cp -f $(BUILD_DIR)/$(APP_NAME)$(EXE) $(APP_NAME)$(EXE) 2>/dev/null || :
+
+$(BUILD_DIR)/$(APP_NAME)$(EXE): $(SRC_DIR)/main.cpp $(LIB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
+
+test: $(RUN_TESTS)
+
+$(BUILD_DIR)/test_%$(EXE): tests/test_%.cpp $(LIB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(LIB_SRCS) $< -o $@
+
+$(RUN_TESTS): run-%: $(BUILD_DIR)/%$(EXE)
+	@echo == $*
+	@$(call run,$<)
+
+$(BUILD_DIR)/avalanche$(EXE): analysis/avalanche.cpp $(LIB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
+
+avalanche: $(BUILD_DIR)/avalanche$(EXE)
+	@$(call run,$<)
+
+$(BUILD_DIR)/sac$(EXE): analysis/sac.cpp $(LIB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
+
+sac: $(BUILD_DIR)/sac$(EXE)
+	@$(call run,$<)
+
+$(BUILD_DIR)/gen_sbox$(EXE): tools/gen_sbox.cpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $< -o $@
+
+sbox: $(BUILD_DIR)/gen_sbox$(EXE)
+	$(call run,$<) > $(BUILD_DIR)/sbox_table.inc.tmp
+	$(call MV,$(BUILD_DIR)/sbox_table.inc.tmp,$(SBOX_INC))
+
+$(BUILD_DIR)/analyze_sbox$(EXE): $(CORE_DIR)/sbox.cpp tools/analyze_sbox.cpp $(SBOX_INC) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(CORE_DIR)/sbox.cpp tools/analyze_sbox.cpp -o $@
+
+analyze: $(BUILD_DIR)/analyze_sbox$(EXE)
+	@$(call run,$<)
+
+test-util: run-test_util
+test-mac: run-test_mac
+test-container: run-test_container
 
 test-e2e: app
-	bash tests/e2e.sh
+	CLI="$(BUILD_DIR)/$(APP_NAME)$(EXE)" bash tests/e2e.sh
 
 test-d: test-util test-mac test-container test-e2e
 
 clean:
-	rm -f $(TEST_BIN) $(TEST_UTIL_BIN) $(TEST_MAC_BIN) $(TEST_CONTAINER_BIN) $(APP_BIN)
+	-$(RMDIR)
+	-$(call RM,$(APP_NAME)$(EXE))
