@@ -1,9 +1,14 @@
 #include "sbox.hpp"
 
-uint64_t sbox_bytes(uint64_t a){
-    return a;
-}
+const uint8_t SBOX[256] = {
+#include "sbox_table.inc"
+};
 
-uint32_t sbox_bytes32(uint32_t a){
-    return a;
+uint8_t sbox(uint8_t x) { return SBOX[x]; }
+
+uint32_t sbox32(uint32_t acc) {
+    return ((uint32_t)SBOX[(acc >> 24) & 0xFF] << 24)
+         | ((uint32_t)SBOX[(acc >> 16) & 0xFF] << 16)
+         | ((uint32_t)SBOX[(acc >> 8) & 0xFF] << 8)
+         | (uint32_t)SBOX[acc & 0xFF];
 }

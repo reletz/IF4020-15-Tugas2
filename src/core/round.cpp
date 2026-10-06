@@ -23,7 +23,7 @@
  */
 static uint32_t sd_step(uint32_t &acc, uint32_t &feedback, uint32_t x, uint32_t k){
     acc += (x - feedback);
-    uint32_t q = sbox_bytes32(acc ^ k);
+    uint32_t q = sbox32(acc ^ k);
     feedback = q;
     return q;
 }
