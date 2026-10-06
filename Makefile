@@ -11,7 +11,7 @@ UTIL_DIR := $(SRC_DIR)/util
 
 APP_BIN  := cipher_cli
 
-.PHONY: app test test-util test-mac test-container clean
+.PHONY: app test test-util test-mac test-container test-e2e test-d clean
 
 app:
 	$(CXX) $(CXXFLAGS) $(CORE_DIR)/*.cpp $(UTIL_DIR)/*.cpp src/ops/mac.cpp src/ops/container.cpp src/main.cpp -o $(APP_BIN)
@@ -35,6 +35,11 @@ test-container:
 	$(CXX) $(CXXFLAGS) -Itests $(CORE_DIR)/*.cpp $(UTIL_DIR)/*.cpp src/ops/mac.cpp src/ops/container.cpp tests/test_container.cpp -o $(TEST_CONTAINER_BIN)
 	./$(TEST_CONTAINER_BIN)
 	rm -f ./$(TEST_CONTAINER_BIN)
+
+test-e2e: app
+	bash tests/e2e.sh
+
+test-d: test-util test-mac test-container test-e2e
 
 clean:
 	rm -f $(TEST_BIN) $(TEST_UTIL_BIN) $(TEST_MAC_BIN) $(TEST_CONTAINER_BIN) $(APP_BIN)
