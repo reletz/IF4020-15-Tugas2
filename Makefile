@@ -5,7 +5,7 @@ SRC_DIR  := src
 CORE_DIR := $(SRC_DIR)/core
 TESTS    := test_roundtrip test_permutation
 
-.PHONY: test clean
+.PHONY: test avalanche sac clean
 
 test:
 	@for t in $(TESTS); do \
@@ -15,5 +15,15 @@ test:
 		rm -f $$t; \
 	done
 
+avalanche:
+	$(CXX) $(CXXFLAGS) -O2 $(CORE_DIR)/*.cpp analysis/avalanche.cpp -o avalanche
+	./avalanche
+	rm -f avalanche
+
+sac:
+	$(CXX) $(CXXFLAGS) -O2 $(CORE_DIR)/*.cpp analysis/sac.cpp -o sac
+	./sac
+	rm -f sac
+
 clean:
-	rm -f $(TESTS)
+	rm -f $(TESTS) avalanche sac

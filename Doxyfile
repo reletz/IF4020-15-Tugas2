@@ -1,0 +1,18 @@
+PROJECT_NAME           = "BlockCipher"
+OUTPUT_DIRECTORY       = build
+INPUT_ENCODING         = UTF-8
+
+# Dokumentasi
+INPUT                  = include src analysis
+FILE_PATTERNS          = *.hpp *.cpp
+RECURSIVE              = YES
+EXTRACT_STATIC         = YES
+
+# Warning (Complete)
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = YES
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+QUIET                  = YES
