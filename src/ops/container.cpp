@@ -27,6 +27,8 @@ std::string mode_name(Mode mode) {
 
 namespace {
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary PKCS#7 padding placeholder.
+// Owned by Task C (padding.hpp). Replace with official function once Task C lands.
 util::Bytes pad_pkcs7(const util::Bytes& in) {
     size_t pad = BLOCK_SIZE - (in.size() % BLOCK_SIZE);
     util::Bytes out = in;
@@ -34,6 +36,8 @@ util::Bytes pad_pkcs7(const util::Bytes& in) {
     return out;
 }
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary PKCS#7 unpadding placeholder.
+// Owned by Task C (padding.hpp). Replace with official function once Task C lands.
 util::Bytes unpad_pkcs7(const util::Bytes& in) {
     if (in.empty() || (in.size() % BLOCK_SIZE) != 0) throw FormatError("Format padding PKCS#7 tidak valid");
     uint8_t pad = in.back();
@@ -44,18 +48,24 @@ util::Bytes unpad_pkcs7(const util::Bytes& in) {
     return util::Bytes(in.begin(), in.end() - pad);
 }
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary ECB encrypt placeholder.
+// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
 util::Bytes mock_ecb_enc(const BlockCipher& c, const uint8_t*, const util::Bytes& in) {
     util::Bytes out(in.size());
     for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) c.encrypt_block(in.data() + i, out.data() + i);
     return out;
 }
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary ECB decrypt placeholder.
+// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
 util::Bytes mock_ecb_dec(const BlockCipher& c, const uint8_t*, const util::Bytes& in) {
     util::Bytes out(in.size());
     for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) c.decrypt_block(in.data() + i, out.data() + i);
     return out;
 }
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary CBC mode placeholder.
+// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
 util::Bytes mock_cbc(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in, bool dec) {
     util::Bytes out(in.size());
     uint8_t block[BLOCK_SIZE];
@@ -74,6 +84,8 @@ util::Bytes mock_cbc(const BlockCipher& c, const uint8_t* iv, const util::Bytes&
     return out;
 }
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary CFB mode placeholder.
+// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
 util::Bytes mock_cfb(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in, bool dec) {
     util::Bytes out(in.size());
     uint8_t fb[BLOCK_SIZE], ks[BLOCK_SIZE];
@@ -87,6 +99,8 @@ util::Bytes mock_cfb(const BlockCipher& c, const uint8_t* iv, const util::Bytes&
     return out;
 }
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary OFB mode placeholder.
+// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
 util::Bytes mock_ofb(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) {
     util::Bytes out(in.size());
     uint8_t st[BLOCK_SIZE];
@@ -99,6 +113,8 @@ util::Bytes mock_ofb(const BlockCipher& c, const uint8_t* iv, const util::Bytes&
     return out;
 }
 
+// [PENDING_TASK_C_INTEGRATION]: Temporary CTR mode placeholder.
+// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
 util::Bytes mock_ctr(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) {
     util::Bytes out(in.size());
     uint8_t ctr[BLOCK_SIZE], ks[BLOCK_SIZE];
