@@ -27,15 +27,17 @@ ifdef WIN_CMD
     RMDIR   = if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
     MV      = move /Y $(call fixpath,$1) $(call fixpath,$2) > nul
     run     = $(call fixpath,$1)
+    RM      = if exist $(call fixpath,$1) del /F /Q $(call fixpath,$1)
 else
     fixpath = $1
     MKDIR   = mkdir -p $@
     RMDIR   = rm -rf $(BUILD_DIR)
     MV      = mv -f $1 $2
     run     = ./$1
+    RM      = rm -f $1
 endif
 
-.PHONY: all app test avalanche sac sbox analyze clean $(RUN_TESTS)
+.PHONY: all app test avalanche sac sbox analyze clean $(RUN_TESTS) test-util test-mac test-container test-e2e test-d
 
 all: app
 
@@ -43,6 +45,7 @@ $(BUILD_DIR):
 	$(MKDIR)
 
 app: $(BUILD_DIR)/$(APP_NAME)$(EXE)
+	@cp -f $(BUILD_DIR)/$(APP_NAME)$(EXE) $(APP_NAME)$(EXE) 2>/dev/null || :
 
 $(BUILD_DIR)/$(APP_NAME)$(EXE): $(SRC_DIR)/main.cpp $(LIB_SRCS) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
@@ -81,5 +84,15 @@ $(BUILD_DIR)/analyze_sbox$(EXE): $(CORE_DIR)/sbox.cpp tools/analyze_sbox.cpp $(S
 analyze: $(BUILD_DIR)/analyze_sbox$(EXE)
 	@$(call run,$<)
 
+test-util: run-test_util
+test-mac: run-test_mac
+test-container: run-test_container
+
+test-e2e: app
+	CLI="$(BUILD_DIR)/$(APP_NAME)$(EXE)" bash tests/e2e.sh
+
+test-d: test-util test-mac test-container test-e2e
+
 clean:
 	-$(RMDIR)
+	-$(call RM,$(APP_NAME)$(EXE))

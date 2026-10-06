@@ -64,12 +64,13 @@ public:
     explicit SecureEnvelope(const uint8_t master_key[KEY_SIZE]);
 
     /**
-     * @brief Mengenkripsi plaintext ke format kontainer v1 terotentikasi.
+     * @brief Mengenkripsi plaintext ke format kontainer v1 terautentikasi.
      * @param[in] plaintext Data yang akan dienkripsi.
      * @param[in] mode      Mode operasi yang digunakan.
+     * @param[in] custom_iv IV/Counter kustom 16 byte opsional (null = dibangkitkan acak via CSPRNG).
      * @return util::Bytes  Blob kontainer lengkap.
      */
-    util::Bytes seal(const util::Bytes& plaintext, Mode mode) const;
+    util::Bytes seal(const util::Bytes& plaintext, Mode mode, const uint8_t* custom_iv = nullptr) const;
 
     /**
      * @brief Memverifikasi integritas kontainer dan mendekripsi isinya.
