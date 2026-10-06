@@ -8,16 +8,13 @@ uint8_t sbox(uint8_t x) {
     return SBOX[x];
 }
 
-uint64_t sbox_bytes(uint64_t a) {
-    uint64_t r = 0;
-    for (int i = 0; i < 8; i++)
-        r |= (uint64_t)SBOX[(a >> (8 * i)) & 0xFF] << (8 * i);
-    return r;
+uint32_t sbox32(uint32_t a) {
+    return ((uint32_t)SBOX[(a >> 24) & 0xFF] << 24)
+         | ((uint32_t)SBOX[(a >> 16) & 0xFF] << 16)
+         | ((uint32_t)SBOX[(a >> 8) & 0xFF] << 8)
+         | (uint32_t)SBOX[a & 0xFF];
 }
 
-uint32_t sbox_bytes32(uint32_t a) {
-    uint32_t r = 0;
-    for (int i = 0; i < 4; i++)
-        r |= (uint32_t)SBOX[(a >> (8 * i)) & 0xFF] << (8 * i);
-    return r;
+uint64_t sbox64(uint64_t a) {
+    return ((uint64_t)sbox32((uint32_t)(a >> 32)) << 32) | sbox32((uint32_t)a);
 }

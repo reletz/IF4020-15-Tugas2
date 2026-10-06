@@ -29,7 +29,7 @@
  * @param[in] k Round key (64 bit).
  * @return Masker 64 bit yang di-XOR ke setengah blok lainnya.
  *
- * @see permute_bits, sbox_bytes32
+ * @see permute_bits, sbox32
  */
 uint64_t round_f(uint64_t r, uint64_t k);
 

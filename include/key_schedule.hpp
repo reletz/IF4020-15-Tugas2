@@ -15,7 +15,7 @@
  * Master key (128 bit) dipecah jadi dua 64 bit (a dan b). Tiap round i:
  * @code
  * a = rotl(a, 13) + PHI * (i + 1)   // mod 2^64
- * a = sbox_bytes(a)
+ * a = sbox64(a)
  * b ^= rotl(a, 29)
  * swap(a, b)
  * K_i = a xor b
