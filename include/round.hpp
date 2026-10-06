@@ -19,7 +19,7 @@
  * w0 = rotl(w0, 7);  w1 = rotl(w1, 19)
  * pass mundur: w1 -> w0                (sigma-delta, kunci k0 dan k1 ditukar)
  * hasil = permute_bits(w0 || w1)
- * @endcodestruktur
+ * @endcode
  *
  * Tiap langkah sigma-delta menyimpan state (akumulator dan feedback), jadi F
  * uninvertable. Karena Feistel tidak butuh invers F:,
