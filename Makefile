@@ -1,9 +1,5 @@
 CXX      ?= g++
-<<<<<<< HEAD
-CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic -Iinclude
-=======
 CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests
->>>>>>> 9543fe6 (feat:merge makefile:)
 OPTFLAGS := -O2
 
 SRC_DIR   := src
@@ -161,6 +157,16 @@ $(BUILD_DIR)/analyze_sbox$(EXE): $(CORE_DIR)/sbox.cpp tools/analyze_sbox.cpp | $
 analyze: $(BUILD_DIR)/analyze_sbox$(EXE)
 	@$(call run,$<)
 endif
+
+avalanche:
+	$(CXX) $(CXXFLAGS) -O2 $(CORE_DIR)/*.cpp analysis/avalanche.cpp -o avalanche
+	./avalanche
+	rm -f avalanche
+
+sac:
+	$(CXX) $(CXXFLAGS) -O2 $(CORE_DIR)/*.cpp analysis/sac.cpp -o sac
+	./sac
+	rm -f sac
 
 clean:
 	-$(RMDIR)

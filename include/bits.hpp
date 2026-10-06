@@ -23,7 +23,6 @@ inline uint64_t rotl64(uint64_t x, unsigned n){
 }
 
 
-<<<<<<< HEAD
 /**
  * @brief Rotasi kiri 32 bit.
  *
@@ -34,15 +33,8 @@ inline uint64_t rotl64(uint64_t x, unsigned n){
  * @warning @c n = 0 atau @c n = 32 menghasilkan
  *          undefined behavior.
  */
-=======
-/// Rotasi kiri 32 bit. n harus 1..31 (n = 0 atau 32 -> undefined behavior).
->>>>>>> 9543fe6 (feat:merge makefile:)
 inline uint32_t rotl32(uint32_t x, unsigned n){
     return (x << n) | x >> (32 - n);
 }
 
-<<<<<<< HEAD
 #endif
-=======
-#endif
->>>>>>> 9543fe6 (feat:merge makefile:)
