@@ -22,6 +22,10 @@ namespace cmac_detail {
  *
  * Menggeser seluruh blok 128 bit ke kiri sebesar 1 bit secara branch-free.
  * Jika MSB bernilai 1, byte terakhir (byte 15) di-XOR dengan konstanta Rb = 0x87.
+ *
+ * @param[in]  in  Blok masukan, 16 byte.
+ * @param[out] out Blok hasil doubling, 16 byte.
+ * @throw std::invalid_argument jika @c in atau @c out bernilai nullptr.
  */
 void dbl(const uint8_t in[16], uint8_t out[16]);
 } // namespace cmac_detail
@@ -31,6 +35,11 @@ void dbl(const uint8_t in[16], uint8_t out[16]);
  */
 class Cmac {
 public:
+    /**
+     * @brief Membuat objek CMAC dan menurunkan subkey K1 dan K2 dari cipher.
+     * @param[in] cipher Block cipher 128-bit yang dipakai. Hanya disimpan sebagai
+     *                   referensi, jadi objek ini harus tetap hidup selama @ref Cmac dipakai.
+     */
     explicit Cmac(const BlockCipher& cipher);
     Cmac(const BlockCipher&&) = delete; // Mencegah dangling reference ke cipher sementara
     ~Cmac();
@@ -54,10 +63,25 @@ public:
      */
     void finalize(uint8_t tag[MAC_TAG_SIZE]);
 
-    /// Menghitung tag CMAC untuk seluruh data dalam satu pemanggilan (one-shot).
+    /**
+     * @brief Menghitung tag CMAC untuk seluruh data dalam satu pemanggilan (one-shot).
+     * @param[in]  cipher Block cipher 128-bit yang dipakai.
+     * @param[in]  data   Data yang diautentikasi.
+     * @param[in]  len    Panjang data dalam byte.
+     * @param[out] tag    Buffer 16-byte untuk tag hasil perhitungan.
+     * @throw std::invalid_argument jika @c data nullptr saat @c len > 0, atau @c tag nullptr.
+     */
     static void compute(const BlockCipher& cipher, const uint8_t* data, size_t len, uint8_t tag[MAC_TAG_SIZE]);
 
-    /// Memverifikasi keabsahan tag CMAC dalam waktu konstan (constant-time).
+    /**
+     * @brief Memverifikasi keabsahan tag CMAC dalam waktu konstan (constant-time).
+     * @param[in] cipher Block cipher 128-bit yang dipakai.
+     * @param[in] data   Data yang diautentikasi.
+     * @param[in] len    Panjang data dalam byte.
+     * @param[in] tag    Tag 16-byte yang akan dicocokkan.
+     * @return @c true jika tag cocok dengan hasil perhitungan, @c false jika tidak.
+     * @throw std::invalid_argument jika @c tag nullptr, atau @c data nullptr saat @c len > 0.
+     */
     static bool verify(const BlockCipher& cipher, const uint8_t* data, size_t len, const uint8_t tag[MAC_TAG_SIZE]);
 
 private:
@@ -86,9 +110,13 @@ struct DerivedKeys {
         util::secure_zero(enc, sizeof(enc));
         util::secure_zero(mac, sizeof(mac));
     }
+    /// Copy constructor (default).
     DerivedKeys(const DerivedKeys&) = default;
+    /// Copy assignment (default). @return Referensi ke objek ini.
     DerivedKeys& operator=(const DerivedKeys&) = default;
+    /// Move constructor (default).
     DerivedKeys(DerivedKeys&&) noexcept = default;
+    /// Move assignment (default). @return Referensi ke objek ini.
     DerivedKeys& operator=(DerivedKeys&&) noexcept = default;
 };
 
@@ -97,6 +125,9 @@ struct DerivedKeys {
  *
  * enc = E_master(00 00 ... 00 01)
  * mac = E_master(00 00 ... 00 02)
+ *
+ * @param[in] master_cipher Block cipher yang dikunci dengan master key.
+ * @return Pasangan kunci @c enc dan @c mac yang berbeda satu sama lain.
  */
 DerivedKeys derive_keys(const BlockCipher& master_cipher);
 

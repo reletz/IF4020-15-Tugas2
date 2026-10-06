@@ -30,7 +30,7 @@ uint8_t sbox(uint8_t x);
  * @brief Substitusi tiap byte pada nilai 32 bit (1 word).
  *
  * Tiap dari 4 byte diganti dengan nilai @ref SBOX secara independen.
- * Dipakai di fungsi F (round function) dan key schedule.
+ * Dipakai di fungsi F (round function).
  *
  * @param[in] a Nilai 32 bit.
  * @return Nilai dengan tiap byte sudah disubstitusi.
