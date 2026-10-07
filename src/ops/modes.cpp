@@ -23,8 +23,14 @@ util::Bytes ecb_encrypt(const BlockCipher& cipher, const uint8_t* iv, const util
         throw std::invalid_argument("Ukuran masukan ECB encrypt harus kelipatan BLOCK_SIZE (16 byte)");
     }
     util::Bytes out(in.size());
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        cipher.encrypt_block(in.data() + i, out.data() + i);
+    size_t num_blocks = in.size() / BLOCK_SIZE;
+
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static) if(num_blocks >= PARALLEL_THRESHOLD_BLOCKS)
+#endif
+    for (size_t b = 0; b < num_blocks; ++b) {
+        size_t offset = b * BLOCK_SIZE;
+        cipher.encrypt_block(in.data() + offset, out.data() + offset);
     }
     return out;
 }
@@ -35,8 +41,14 @@ util::Bytes ecb_decrypt(const BlockCipher& cipher, const uint8_t* iv, const util
         throw std::invalid_argument("Ukuran masukan ECB decrypt harus kelipatan BLOCK_SIZE (16 byte)");
     }
     util::Bytes out(in.size());
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        cipher.decrypt_block(in.data() + i, out.data() + i);
+    size_t num_blocks = in.size() / BLOCK_SIZE;
+
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static) if(num_blocks >= PARALLEL_THRESHOLD_BLOCKS)
+#endif
+    for (size_t b = 0; b < num_blocks; ++b) {
+        size_t offset = b * BLOCK_SIZE;
+        cipher.decrypt_block(in.data() + offset, out.data() + offset);
     }
     return out;
 }
@@ -76,13 +88,17 @@ util::Bytes cbc_decrypt(const BlockCipher& cipher, const uint8_t* iv, const util
     }
 
     util::Bytes out(in.size());
-    uint8_t block[BLOCK_SIZE];
-    const uint8_t* prev = iv;
+    size_t num_blocks = in.size() / BLOCK_SIZE;
 
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        cipher.decrypt_block(in.data() + i, block);
-        util::xor_block(block, prev, out.data() + i, BLOCK_SIZE);
-        prev = in.data() + i;
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static) if(num_blocks >= PARALLEL_THRESHOLD_BLOCKS)
+#endif
+    for (size_t b = 0; b < num_blocks; ++b) {
+        uint8_t block[BLOCK_SIZE];
+        size_t offset = b * BLOCK_SIZE;
+        const uint8_t* prev = (b == 0) ? iv : (in.data() + offset - BLOCK_SIZE);
+        cipher.decrypt_block(in.data() + offset, block);
+        util::xor_block(block, prev, out.data() + offset, BLOCK_SIZE);
     }
     return out;
 }
@@ -117,14 +133,18 @@ util::Bytes cfb_decrypt(const BlockCipher& cipher, const uint8_t* iv, const util
     }
 
     util::Bytes out(in.size());
-    uint8_t fb[BLOCK_SIZE], ks[BLOCK_SIZE];
-    std::memcpy(fb, iv, BLOCK_SIZE);
+    size_t num_blocks = (in.size() + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        size_t n = std::min<size_t>(BLOCK_SIZE, in.size() - i);
-        cipher.encrypt_block(fb, ks);
-        util::xor_block(in.data() + i, ks, out.data() + i, n);
-        std::memcpy(fb, in.data() + i, n);
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static) if(num_blocks >= PARALLEL_THRESHOLD_BLOCKS)
+#endif
+    for (size_t b = 0; b < num_blocks; ++b) {
+        uint8_t ks[BLOCK_SIZE];
+        size_t offset = b * BLOCK_SIZE;
+        size_t n = std::min<size_t>(BLOCK_SIZE, in.size() - offset);
+        const uint8_t* prev = (b == 0) ? iv : (in.data() + offset - BLOCK_SIZE);
+        cipher.encrypt_block(prev, ks);
+        util::xor_block(in.data() + offset, ks, out.data() + offset, n);
     }
     return out;
 }
@@ -158,10 +178,13 @@ util::Bytes ctr_crypt(const BlockCipher& cipher, const uint8_t* iv, const util::
     }
 
     util::Bytes out(in.size());
-    uint8_t ctr[BLOCK_SIZE], ks[BLOCK_SIZE];
     size_t num_blocks = (in.size() + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static) if(num_blocks >= PARALLEL_THRESHOLD_BLOCKS)
+#endif
     for (size_t b = 0; b < num_blocks; ++b) {
+        uint8_t ctr[BLOCK_SIZE], ks[BLOCK_SIZE];
         size_t offset = b * BLOCK_SIZE;
         size_t n = std::min<size_t>(BLOCK_SIZE, in.size() - offset);
         ctr_at(iv, static_cast<uint64_t>(b), ctr);
@@ -171,4 +194,4 @@ util::Bytes ctr_crypt(const BlockCipher& cipher, const uint8_t* iv, const util::
     return out;
 }
 
-}
+} // namespace modes

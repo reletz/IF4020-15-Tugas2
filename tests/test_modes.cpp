@@ -213,11 +213,78 @@ void test_relational_properties() {
     CHECK(modes::ctr_crypt(cipher, TEST_IV, double_block) == ct_ctr, "CTR deterministik");
 }
 
+void test_parallel_threshold_and_roundtrip() {
+    CustomCipher cipher(TEST_KEY);
+
+    const size_t threshold_lens[] = {
+        modes::PARALLEL_THRESHOLD_BLOCKS * BLOCK_SIZE,
+        (modes::PARALLEL_THRESHOLD_BLOCKS + 512) * BLOCK_SIZE,
+        (modes::PARALLEL_THRESHOLD_BLOCKS * 2) * BLOCK_SIZE 
+    };
+
+    for (size_t len : threshold_lens) {
+        util::Bytes pt = make_pattern(len);
+
+        // 1. ECB
+        util::Bytes ct_ecb = modes::ecb_encrypt(cipher, TEST_IV, pt);
+        CHECK(ct_ecb.size() == len, "ECB ukuran threshold cocok len " + std::to_string(len));
+        util::Bytes dec_ecb = modes::ecb_decrypt(cipher, TEST_IV, ct_ecb);
+        CHECK(dec_ecb == pt, "ECB round-trip di atas threshold cocok len " + std::to_string(len));
+
+        // 2. CBC (Enkripsi serial, Dekripsi paralel)
+        util::Bytes ct_cbc = modes::cbc_encrypt(cipher, TEST_IV, pt);
+        CHECK(ct_cbc.size() == len, "CBC ukuran threshold cocok len " + std::to_string(len));
+        util::Bytes dec_cbc = modes::cbc_decrypt(cipher, TEST_IV, ct_cbc);
+        CHECK(dec_cbc == pt, "CBC round-trip di atas threshold cocok len " + std::to_string(len));
+
+        // 3. CFB (Enkripsi serial, Dekripsi paralel)
+        util::Bytes ct_cfb = modes::cfb_encrypt(cipher, TEST_IV, pt);
+        CHECK(ct_cfb.size() == len, "CFB ukuran threshold cocok len " + std::to_string(len));
+        util::Bytes dec_cfb = modes::cfb_decrypt(cipher, TEST_IV, ct_cfb);
+        CHECK(dec_cfb == pt, "CFB round-trip di atas threshold cocok len " + std::to_string(len));
+
+        // 4. OFB (Serial)
+        util::Bytes ct_ofb = modes::ofb_crypt(cipher, TEST_IV, pt);
+        CHECK(ct_ofb.size() == len, "OFB ukuran threshold cocok len " + std::to_string(len));
+        util::Bytes dec_ofb = modes::ofb_crypt(cipher, TEST_IV, ct_ofb);
+        CHECK(dec_ofb == pt, "OFB round-trip di atas threshold cocok len " + std::to_string(len));
+
+        // 5. CTR (Paralel penuh)
+        util::Bytes ct_ctr = modes::ctr_crypt(cipher, TEST_IV, pt);
+        CHECK(ct_ctr.size() == len, "CTR ukuran threshold cocok len " + std::to_string(len));
+        util::Bytes dec_ctr = modes::ctr_crypt(cipher, TEST_IV, ct_ctr);
+        CHECK(dec_ctr == pt, "CTR round-trip di atas threshold cocok len " + std::to_string(len));
+
+        size_t sample_b = (len / BLOCK_SIZE) - 1;
+        size_t sample_offset = sample_b * BLOCK_SIZE;
+        uint8_t sample_block_pt[BLOCK_SIZE], sample_block_ct[BLOCK_SIZE];
+        std::memcpy(sample_block_pt, pt.data() + sample_offset, BLOCK_SIZE);
+        cipher.encrypt_block(sample_block_pt, sample_block_ct);
+        CHECK(std::memcmp(ct_ecb.data() + sample_offset, sample_block_ct, BLOCK_SIZE) == 0,
+              "ECB blok sampel paralel identik dengan enkripsi blok serial acuan");
+
+        uint8_t sample_ctr[BLOCK_SIZE], sample_ks[BLOCK_SIZE], exp_ctr_ct[BLOCK_SIZE];
+        modes::ctr_at(TEST_IV, sample_b, sample_ctr);
+        cipher.encrypt_block(sample_ctr, sample_ks);
+        util::xor_block(sample_block_pt, sample_ks, exp_ctr_ct, BLOCK_SIZE);
+        CHECK(std::memcmp(ct_ctr.data() + sample_offset, exp_ctr_ct, BLOCK_SIZE) == 0,
+              "CTR blok sampel paralel identik dengan enkripsi blok serial acuan");
+    }
+
+    size_t non_multiple_len = (modes::PARALLEL_THRESHOLD_BLOCKS + 100) * BLOCK_SIZE + 13;
+    util::Bytes pt_partial = make_pattern(non_multiple_len);
+    util::Bytes ct_partial = modes::ctr_crypt(cipher, TEST_IV, pt_partial);
+    CHECK(ct_partial.size() == non_multiple_len, "CTR ukuran parsial di atas threshold cocok");
+    util::Bytes dec_partial = modes::ctr_crypt(cipher, TEST_IV, ct_partial);
+    CHECK(dec_partial == pt_partial, "CTR round-trip ukuran parsial di atas threshold cocok");
+}
+
 int main() {
     test_ctr_at_helper();
     test_ecb_cbc_roundtrip();
     test_stream_modes_roundtrip();
     test_invalid_length_and_args();
     test_relational_properties();
+    test_parallel_threshold_and_roundtrip();
     return test::report();
 }

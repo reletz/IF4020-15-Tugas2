@@ -2,6 +2,11 @@ CXX      ?= g++
 CXXFLAGS := -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests
 OPTFLAGS := -O2
 
+OMP ?= 1
+ifeq ($(OMP),1)
+    CXXFLAGS += -fopenmp
+endif
+
 SRC_DIR   := src
 CORE_DIR  := $(SRC_DIR)/core
 BUILD_DIR := build
