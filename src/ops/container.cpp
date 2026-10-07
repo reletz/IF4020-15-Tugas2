@@ -1,4 +1,7 @@
 #include "container.hpp"
+#include "modes.hpp"
+#include "padding.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstring>
@@ -27,107 +30,6 @@ std::string mode_name(Mode mode) {
 
 namespace {
 
-// [PENDING_TASK_C_INTEGRATION]: Temporary PKCS#7 padding placeholder.
-// Owned by Task C (padding.hpp). Replace with official function once Task C lands.
-util::Bytes pad_pkcs7(const util::Bytes& in) {
-    size_t pad = BLOCK_SIZE - (in.size() % BLOCK_SIZE);
-    util::Bytes out = in;
-    out.insert(out.end(), pad, static_cast<uint8_t>(pad));
-    return out;
-}
-
-// [PENDING_TASK_C_INTEGRATION]: Temporary PKCS#7 unpadding placeholder.
-// Owned by Task C (padding.hpp). Replace with official function once Task C lands.
-util::Bytes unpad_pkcs7(const util::Bytes& in) {
-    if (in.empty() || (in.size() % BLOCK_SIZE) != 0) throw FormatError("Format padding PKCS#7 tidak valid");
-    uint8_t pad = in.back();
-    if (pad == 0 || pad > BLOCK_SIZE || pad > in.size()) throw FormatError("Format padding PKCS#7 tidak valid");
-    for (size_t i = in.size() - pad; i < in.size(); ++i) {
-        if (in[i] != pad) throw FormatError("Format padding PKCS#7 tidak valid");
-    }
-    return util::Bytes(in.begin(), in.end() - pad);
-}
-
-// [PENDING_TASK_C_INTEGRATION]: Temporary ECB encrypt placeholder.
-// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
-util::Bytes mock_ecb_enc(const BlockCipher& c, const uint8_t*, const util::Bytes& in) {
-    util::Bytes out(in.size());
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) c.encrypt_block(in.data() + i, out.data() + i);
-    return out;
-}
-
-// [PENDING_TASK_C_INTEGRATION]: Temporary ECB decrypt placeholder.
-// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
-util::Bytes mock_ecb_dec(const BlockCipher& c, const uint8_t*, const util::Bytes& in) {
-    util::Bytes out(in.size());
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) c.decrypt_block(in.data() + i, out.data() + i);
-    return out;
-}
-
-// [PENDING_TASK_C_INTEGRATION]: Temporary CBC mode placeholder.
-// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
-util::Bytes mock_cbc(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in, bool dec) {
-    util::Bytes out(in.size());
-    uint8_t block[BLOCK_SIZE];
-    const uint8_t* prev = iv;
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        if (dec) {
-            c.decrypt_block(in.data() + i, block);
-            util::xor_block(block, prev, out.data() + i, BLOCK_SIZE);
-            prev = in.data() + i;
-        } else {
-            util::xor_block(in.data() + i, prev, block, BLOCK_SIZE);
-            c.encrypt_block(block, out.data() + i);
-            prev = out.data() + i;
-        }
-    }
-    return out;
-}
-
-// [PENDING_TASK_C_INTEGRATION]: Temporary CFB mode placeholder.
-// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
-util::Bytes mock_cfb(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in, bool dec) {
-    util::Bytes out(in.size());
-    uint8_t fb[BLOCK_SIZE], ks[BLOCK_SIZE];
-    std::memcpy(fb, iv, BLOCK_SIZE);
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        size_t n = std::min<size_t>(BLOCK_SIZE, in.size() - i);
-        c.encrypt_block(fb, ks);
-        util::xor_block(in.data() + i, ks, out.data() + i, n);
-        std::memcpy(fb, (dec ? in.data() : out.data()) + i, n);
-    }
-    return out;
-}
-
-// [PENDING_TASK_C_INTEGRATION]: Temporary OFB mode placeholder.
-// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
-util::Bytes mock_ofb(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) {
-    util::Bytes out(in.size());
-    uint8_t st[BLOCK_SIZE];
-    std::memcpy(st, iv, BLOCK_SIZE);
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        size_t n = std::min<size_t>(BLOCK_SIZE, in.size() - i);
-        c.encrypt_block(st, st);
-        util::xor_block(in.data() + i, st, out.data() + i, n);
-    }
-    return out;
-}
-
-// [PENDING_TASK_C_INTEGRATION]: Temporary CTR mode placeholder.
-// Owned by Task C (modes.hpp). Replace with official function once Task C lands.
-util::Bytes mock_ctr(const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) {
-    util::Bytes out(in.size());
-    uint8_t ctr[BLOCK_SIZE], ks[BLOCK_SIZE];
-    std::memcpy(ctr, iv, BLOCK_SIZE);
-    for (size_t i = 0; i < in.size(); i += BLOCK_SIZE) {
-        size_t n = std::min<size_t>(BLOCK_SIZE, in.size() - i);
-        c.encrypt_block(ctr, ks);
-        util::xor_block(in.data() + i, ks, out.data() + i, n);
-        for (int j = BLOCK_SIZE - 1; j >= 0 && ++ctr[j] == 0; --j) {}
-    }
-    return out;
-}
-
 using ModeFn = util::Bytes (*)(const BlockCipher&, const uint8_t*, const util::Bytes&);
 struct ModeHandler {
     bool requires_padding;
@@ -135,17 +37,13 @@ struct ModeHandler {
     ModeFn decrypt;
 };
 
-// [PENDING_TASK_C_INTEGRATION]: Mode operations currently use an internal mock adapter.
-// Once Task C (modes.hpp & padding.hpp) lands on main, plug official functions into container.cpp.
 const ModeHandler& get_handler(Mode mode) {
     static const ModeHandler handlers[] = {
-        { true,  mock_ecb_enc, mock_ecb_dec },
-        { true,  [](const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) { return mock_cbc(c, iv, in, false); },
-                 [](const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) { return mock_cbc(c, iv, in, true); } },
-        { false, [](const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) { return mock_cfb(c, iv, in, false); },
-                 [](const BlockCipher& c, const uint8_t* iv, const util::Bytes& in) { return mock_cfb(c, iv, in, true); } },
-        { false, mock_ofb, mock_ofb },
-        { false, mock_ctr, mock_ctr }
+        { true,  modes::ecb_encrypt, modes::ecb_decrypt },
+        { true,  modes::cbc_encrypt, modes::cbc_decrypt },
+        { false, modes::cfb_encrypt, modes::cfb_decrypt },
+        { false, modes::ofb_crypt,   modes::ofb_crypt },
+        { false, modes::ctr_crypt,   modes::ctr_crypt }
     };
     auto idx = static_cast<size_t>(mode);
     if (idx < 1 || idx > 5) throw FormatError("Mode ID tidak valid");
@@ -174,7 +72,7 @@ util::Bytes SecureEnvelope::seal(const util::Bytes& plaintext, Mode mode, const 
         }
     }
 
-    util::Bytes payload = handler.requires_padding ? pad_pkcs7(plaintext) : plaintext;
+    util::Bytes payload = handler.requires_padding ? pkcs7_pad(plaintext) : plaintext;
     util::Bytes ciphertext = handler.encrypt(enc_cipher_, iv, payload);
 
     util::Bytes blob;
@@ -211,5 +109,12 @@ util::Bytes SecureEnvelope::open(const util::Bytes& blob) const {
     const uint8_t* iv = blob.data() + 6;
     util::Bytes ciphertext(blob.begin() + CONTAINER_HEADER_SIZE, blob.begin() + auth_len);
     util::Bytes plaintext = handler.decrypt(enc_cipher_, iv, ciphertext);
-    return handler.requires_padding ? unpad_pkcs7(plaintext) : plaintext;
+    if (handler.requires_padding) {
+        try {
+            return pkcs7_unpad(plaintext);
+        } catch (const PaddingError& e) {
+            throw FormatError(std::string("Format padding tidak valid: ") + e.what());
+        }
+    }
+    return plaintext;
 }
