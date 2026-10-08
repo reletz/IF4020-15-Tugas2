@@ -1,0 +1,6 @@
+Benchmark mode operasi (median dari 5 run, tanpa I/O dan CMAC)
+CPU      : AMD Ryzen 5 4600H with Radeon Graphics
+Thread   : 12 paralel (omp_get_num_procs = 12), OpenMP 201511
+Compiler : 13.3.0, optimasi aktif (-O2)
+Threshold: 1024 blok (16 KiB) sebelum paralel aktif
+Lingkungan: WSL2 Ubuntu, dihasilkan dengan `make bench-csv`
