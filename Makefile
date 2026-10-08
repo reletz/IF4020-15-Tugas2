@@ -12,6 +12,7 @@ CORE_DIR  := $(SRC_DIR)/core
 BUILD_DIR := build
 APP_NAME  := cipher_cli
 SBOX_INC  := $(CORE_DIR)/sbox_table.inc
+BENCH_CSV ?= docs/report/data/bench.csv
 
 LIB_SRCS   := $(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/*/*.cpp))
 TEST_NAMES := $(basename $(notdir $(wildcard tests/test_*.cpp)))
@@ -42,7 +43,7 @@ else
     RM      = rm -f $1
 endif
 
-.PHONY: all app test avalanche sac sbox analyze clean $(RUN_TESTS) test-util test-mac test-container test-e2e test-d
+.PHONY: all app test avalanche sac bench bench-csv sbox analyze clean $(RUN_TESTS) test-util test-mac test-container test-e2e test-d
 
 all: app
 
@@ -72,6 +73,17 @@ avalanche: $(BUILD_DIR)/avalanche$(EXE)
 
 $(BUILD_DIR)/sac$(EXE): analysis/sac.cpp $(LIB_SRCS) | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
+
+$(BUILD_DIR)/bench_modes$(EXE): analysis/bench_modes.cpp $(LIB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
+
+bench: $(BUILD_DIR)/bench_modes$(EXE)
+	@$(call run,$<) $(BENCH_ARGS)
+
+bench-csv: $(BUILD_DIR)/bench_modes$(EXE)
+	@mkdir -p $(dir $(BENCH_CSV))
+	$(call run,$<) --csv $(BENCH_ARGS) > $(BENCH_CSV)
+	@echo Hasil disimpan ke $(BENCH_CSV)
 
 sac: $(BUILD_DIR)/sac$(EXE)
 	@$(call run,$<)
