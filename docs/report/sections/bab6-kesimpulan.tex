@@ -1,5 +1,69 @@
 \section{Kesimpulan dan Saran Pengembangan}
+
 \subsection{Kesimpulan}
-% TODO: kesimpulan utama (hasil uji avalanche, entropi, histogram, mode operasi) setelah Bab 5 selesai.
+Berdasarkan perancangan, implementasi, dan pengujian pada laporan ini, diperoleh kesimpulan berikut.
+
+\begin{enumerate}
+  \item \textbf{Rancangan memenuhi syarat spesifikasi.} \algname{} adalah \textit{block cipher}
+    jaringan Feistel 16 putaran dengan blok dan kunci 128 bit. Substitusi dilakukan oleh \textit{S-box}
+    8 bit, transposisi oleh permutasi bit 64 bit, dan operasi tambahan berupa penjumlahan modulo
+    $2^{32}$ serta rotasi. Setiap putaran memakai kunci putaran yang dibangkitkan dari kunci utama oleh
+    \textit{key schedule}.
+
+  \item \textbf{Implementasi berfungsi pada kelima mode operasi.} ECB, CBC, CFB, OFB, dan CTR
+    dilengkapi \textit{padding} PKCS\#7 dan verifikasi integritas \textit{encrypt-then-MAC}
+    dengan CMAC. Pada seluruh pengujian, hasil dekripsi identik dengan berkas asli, sedangkan
+    cipherteks yang diubah, kunci yang salah, dan kontainer yang terpotong ditolak.
+
+  \item \textbf{Difusi cipher memenuhi target.} Avalanche effect rata-rata 49,99\% untuk perubahan
+    1 bit plainteks maupun kunci, dan uji SAC tidak menemukan pasangan bit \textit{input} dan
+    \textit{output} yang bias (0 dari 16.384 sel di luar $4\sigma$). Difusi penuh dicapai pada putaran
+    ke-4, sehingga 16 putaran memberi margin sekitar empat kali lipat.
+
+  \item \textbf{Keacakan cipherteks bergantung pada mode.} CBC, CFB, OFB, dan CTR menghasilkan
+    cipherteks yang mendekati seragam (entropi 7,9998 bit/byte) pada ketiga \textit{input} uji,
+    sedangkan ECB tetap membocorkan pola plainteks karena blok yang sama menghasilkan cipherteks
+    yang sama. Hal ini sifat mode ECB dan bukan kelemahan cipher.
+
+  \item \textbf{Ada keterbatasan yang perlu dicatat.}
+    \begin{itemize}
+      \item \textit{S-box} bijektif dan tanpa titik tetap, tetapi \textit{nonlinearity} 98 dan
+        \textit{differential uniformity} 10 lebih lemah daripada \textit{S-box} AES (112 dan 4).
+      \item Belum dilakukan analisis ketahanan terhadap kriptanalisis diferensial dan linear
+        (misalnya penghitungan lintasan), dan \algname{} belum dikriptanalisis oleh pihak lain.
+        Hasil uji statistik pada Bab~5 tidak menggantikan analisis tersebut.
+      \item Konstanta rotasi dan pengali permutasi dipilih sebagai titik awal dan belum dicari
+        secara sistematis.
+    \end{itemize}
+
+  \item \textbf{Inspirasi sigma-delta tercapai sebagian.} Rancangan fungsi $F$ terinspirasi dari
+    modulator sigma-delta dengan dua gagasan: (a) \textit{state} yang dibawa dari satu \textit{word}
+    ke \textit{word} berikutnya, dan (b) sifat \textit{lossy} pada kuantisasi yang diharapkan
+    mempersulit penelusuran \textit{input} dari \textit{output}. Gagasan (a) tercapai, karena
+    \textit{output} tiap langkah bergantung pada seluruh \textit{input} sebelumnya dalam satu
+    \textit{pass}. Gagasan (b) belum tercapai: kuantisasi diganti \textit{S-box} bijektif agar dapat
+    menyertakan kunci, sehingga $F$ pada implementasi ini masih dapat dibalik untuk kunci tertentu
+    (100.000 dari 100.000 pasangan uji). Sifat \textit{lossy} karenanya tidak dapat dijadikan
+    alasan keamanan, dan ketahanan yang teramati berasal dari kunci, \textit{S-box}, rotasi,
+    permutasi, dan struktur Feistel. Gagasan ini dapat ditelaah kembali pada pengembangan
+    selanjutnya.
+\end{enumerate}
 
 \subsection{Saran Pengembangan (Future Works)}
+\begin{itemize}
+  \item \textbf{Menelaah ulang kuantisasi \textit{lossy}.} Merancang langkah kuantisasi yang benar-benar
+    membuang sebagian informasi (misalnya memotong sebagian bit \textit{output}) tanpa melemahkan
+    difusi, lalu mengujinya kembali dengan avalanche dan SAC. Uji properti fungsi $F$
+    pada Bab~5 perlu disesuaikan karena kondisinya akan berbalik.
+  \item \textbf{Analisis kriptanalisis diferensial dan linear.} Menghitung jumlah \textit{S-box}
+    aktif dan batas probabilitas lintasan diferensial dan linear pada $r$ putaran, sebagai
+    pelengkap uji statistik.
+  \item \textbf{Optimasi konstanta.} Mencari konstanta rotasi (7, 19, 13, 29) dan pengali permutasi
+    secara sistematis berdasarkan avalanche per putaran, bukan sekadar titik awal.
+  \item \textbf{Memperbaiki kualitas \textit{S-box}.} Memakai konstruksi aljabar atau pencarian
+    yang lebih ekstensif agar \textit{nonlinearity} dan \textit{differential uniformity} mendekati
+    \textit{S-box} AES.
+  \item \textbf{Pengujian lebih luas.} Menambah uji keacakan statistik standar dan data uji yang lebih
+    beragam, serta kriptanalisis oleh pihak lain sebelum \algname{} dapat dianggap layak dipakai di
+    luar keperluan pembelajaran.
+\end{itemize}

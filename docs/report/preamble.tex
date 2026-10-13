@@ -49,8 +49,11 @@
     \foto{#3}\\[2pt] {\bfseries #1}\\ #2
   \end{minipage}}
 
-% Blok tanda tangan: nama, NIM
-\newcommand{\ttd}[2]{%
+% Blok tanda tangan: nama, NIM, file gambar tanda tangan (kosong jika belum ada)
+\newcommand{\ttd}[3]{%
   \begin{minipage}[t]{0.45\textwidth}\centering
-    \vspace{2.5cm}\rule{0.8\linewidth}{0.4pt}\\ #1 (#2)
+    \IfFileExists{figures/#3}%
+      {\includegraphics[height=2.5cm,width=0.8\linewidth,keepaspectratio]{#3}}%
+      {\rule{0pt}{2.5cm}}\\[-4pt]
+    \rule{0.8\linewidth}{0.4pt}\\ #1 (#2)
   \end{minipage}}

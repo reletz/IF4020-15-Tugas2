@@ -1,4 +1,3 @@
 # output Doxygen dan binary build
 build/
-html/
 latex/
