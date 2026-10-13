@@ -3,3 +3,36 @@
 \subsection{Entropi}
 \subsection{Histogram}
 \subsection{Pengujian Tambahan}
+
+\subsubsection{Kinerja Komputasi: Serial versus Paralel (OpenMP)}
+Pengujian performa komputasi dilakukan untuk mengevaluasi efisiensi paralelisasi OpenMP terhadap mode operasi cipher. Pengujian diukur pada muatan 16 MiB ($16.777.216$ byte) menggunakan prosesor AMD Ryzen 5 4600H (12 thread paralel) dengan kompilator \texttt{g++ -O2}. Hasil komparasi kecepatan serial versus paralel dirangkum pada Tabel~\ref{tab:bench_parallel}.
+
+\begin{table}[H]
+  \centering
+  \caption{Komparasi Throughput Serial versus Paralel (Payload 16 MiB, 12 Thread)}\label{tab:bench_parallel}
+  \begin{tabular}{llcccc}
+    \toprule
+    Mode & Operasi & Throughput Serial & Throughput Paralel & \textit{Speedup} & Hasil Identik \\
+    \midrule
+    ECB & Enkripsi & 8,95 MiB/s  & 44,51 MiB/s & 4,97$\times$ & Ya \\
+    ECB & Dekripsi & 12,28 MiB/s & 83,76 MiB/s & 6,82$\times$ & Ya \\
+    \midrule
+    CBC & Enkripsi & 14,82 MiB/s & 15,51 MiB/s & 1,05$\times$ & Ya \\
+    CBC & Dekripsi & 17,30 MiB/s & 81,03 MiB/s & 4,68$\times$ & Ya \\
+    \midrule
+    CFB & Enkripsi & 15,44 MiB/s & 15,43 MiB/s & 1,00$\times$ & Ya \\
+    CFB & Dekripsi & 15,36 MiB/s & 75,85 MiB/s & 4,94$\times$ & Ya \\
+    \midrule
+    OFB & Enkripsi & 16,09 MiB/s & 13,78 MiB/s & 0,86$\times$ & Ya \\
+    \midrule
+    CTR & Enkripsi & 14,79 MiB/s & 73,74 MiB/s & 4,98$\times$ & Ya \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Hasil eksperimen mengonfirmasi kesesuaian empiris dengan teori mode operasi (Subbab~2.5):
+\begin{enumerate}
+  \item \textbf{Mode Independen (ECB dan CTR)}: Seluruh blok tidak memiliki ketergantungan urutan, sehingga paralelisasi OpenMP menghasilkan peningkatan performa signifikan (\textit{speedup} hingga $\approx 5\times$--$6,8\times$).
+  \item \textbf{Mode Berantai Sekuensial (Enkripsi CBC, CFB, OFB)}: Enkripsi CBC dan CFB membutuhkan blok cipherteks sebelumnya ($C_{i-1}$), sedangkan OFB membutuhkan pembaruan \textit{keystream} sekuensial. Akibatnya, enkripsi tidak dapat diparalelkan (\textit{speedup} $\approx 1\times$).
+  \item \textbf{Dekripsi CBC dan CFB}: Karena seluruh blok cipherteks masukan telah tersedia sebelum dekripsi dijalankan, operasi dekripsi tiap blok dapat dieksekusi secara independen. Hal ini menghasilkan lonjakan \textit{speedup} paralel yang tinggi (4,68$\times$ pada CBC dan 4,94$\times$ pada CFB).
+\end{enumerate}
