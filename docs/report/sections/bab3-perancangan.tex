@@ -1,13 +1,234 @@
 \section{Perancangan Block Cipher}
+Bab ini menjelaskan rancangan \algname{}: parameter, alur enkripsi dan dekripsi, pembentukan kunci
+putaran, \textit{S-box}, permutasi dan rotasi, serta fungsi putaran berbasis sigma-delta.
+
 \subsection{Parameter Umum}
+\algname{} adalah \textit{block cipher} Feistel 16 putaran dengan blok dan kunci 128 bit. Fungsi
+putarannya meminjam struktur modulator sigma-delta (Subbab~2.4).
+
+\begin{table}[H]
+  \centering
+  \caption{Parameter \algname{}}
+  \begin{tabular}{ll}
+    \toprule
+    Parameter & Nilai \\
+    \midrule
+    Ukuran blok & 128 bit (16 byte) \\
+    Ukuran kunci utama & 128 bit (16 byte) \\
+    Struktur & Jaringan Feistel dua cabang, masing-masing 64 bit \\
+    Jumlah putaran & 16 \\
+    Kunci putaran & 16 kunci, masing-masing 64 bit \\
+    Ukuran \textit{word} pada fungsi $F$ & 32 bit \\
+    \textit{S-box} & 8 bit, 256 entri, bijektif \\
+    Permutasi bit & 64 bit, $i \mapsto 41\,i \bmod 64$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Ukuran blok 128 bit dipilih karena blok 64 bit rentan kolisi pada data besar (Subbab~2.1),
+dan ukuran kunci 128 bit memenuhi syarat spesifikasi bahwa kunci utama minimal sepanjang
+ukuran blok.
+
+Tabel~\ref{tab:syarat} memetakan syarat spesifikasi ke komponen rancangan.
+
+\begin{table}[H]
+  \centering
+  \caption{Pemenuhan syarat rancangan}\label{tab:syarat}
+  \begin{tabular}{p{5.5cm}p{9cm}}
+    \toprule
+    Syarat & Komponen \\
+    \midrule
+    Substitusi (\textit{S-box}) & Tabel 256 entri pada fungsi $F$ dan \textit{key schedule} \\
+    Transposisi (permutasi) & Permutasi bit 64 bit di akhir fungsi $F$ \\
+    Operasi tambahan & Penjumlahan modulo $2^{32}$ dan rotasi \\
+    Iterated cipher dengan kunci putaran & 16 putaran, kunci putaran dari \textit{key schedule} \\
+    \textit{Confusion} & \textit{S-box} dan pencampuran kunci \\
+    \textit{Diffusion} & Akumulator sigma-delta, rotasi, permutasi bit, dan struktur Feistel \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \subsection{Alur Enkripsi}
-% \begin{figure}[H]
-%   \centering
-%   \includegraphics[width=0.8\textwidth]{alur-enkripsi.pdf}
-%   \caption{Alur enkripsi \algname}\label{fig:enc}
-% \end{figure}
+Blok plainteks 16 byte dibelah menjadi $L_0$ (8 byte kiri) dan $R_0$ (8 byte kanan), lalu
+untuk $i = 1, \dots, 16$:
+\begin{equation}
+  L_i = R_{i-1}, \qquad R_i = L_{i-1} \oplus F(R_{i-1}, K_i).
+\end{equation}
+Setelah putaran ke-16, kedua separuh ditukar sekali lagi dan digabung menjadi cipherteks:
+\begin{equation}
+  C = R_{16} \,\|\, L_{16}.
+\end{equation}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      box/.style={draw, minimum width=1.6cm, minimum height=0.7cm},
+      xor/.style={draw, circle, inner sep=1pt},
+      >=stealth]
+    \node[box] (L0) at (0,0)    {$L_{i-1}$};
+    \node[box] (R0) at (4,0)    {$R_{i-1}$};
+    \node[box] (F)  at (4,-1.4) {$F$};
+    \node[box] (K)  at (7,-1.4) {$K_i$};
+    \node[xor] (X)  at (4,-2.8) {$\oplus$};
+    \node[box] (L1) at (0,-4.6) {$L_i$};
+    \node[box] (R1) at (4,-4.6) {$R_i$};
+    \draw[->] (R0) -- (F);
+    \draw[->] (K) -- (F);
+    \draw[->] (F) -- (X);
+    \draw[->] (L0.south) -- (0,-2.8) -- (X.west);
+    \draw[->] (X) -- (R1);
+    \draw[->] (R0.east) -- (5.2,0) -- (5.2,-3.7) -- (0,-3.7) -- (L1.north);
+  \end{tikzpicture}
+  \caption{Satu putaran Feistel pada \algname{}}\label{fig:round}
+\end{figure}
+
 \subsection{Alur Dekripsi}
+Dekripsi memakai prosedur yang sama dengan enkripsi, dengan urutan kunci putaran dibalik
+($K_{16}, K_{15}, \dots, K_1$). Pertukaran terakhir pada enkripsi membuat kedua prosedur
+identik. Jika cipherteks $(R_{16}, L_{16})$ dimasukkan ke putaran pertama dekripsi dengan $K_{16}$:
+\begin{equation}
+  R_{16} \oplus F(L_{16}, K_{16}) = \bigl(L_{15} \oplus F(R_{15}, K_{16})\bigr) \oplus F(R_{15}, K_{16}) = L_{15},
+\end{equation}
+karena $L_{16} = R_{15}$. Keadaan setelah putaran ini adalah $(R_{15}, L_{15})$, yaitu keadaan
+putaran ke-15 enkripsi dalam keadaan tertukar. Pola yang sama berlanjut hingga setelah 16 putaran
+keadaannya $(R_0, L_0)$, dan pertukaran terakhir mengembalikan $(L_0, R_0)$, yaitu plainteks. Karena
+yang dikombinasikan hanya hasil $F$ dan XOR, fungsi $F$ tidak perlu memiliki invers.
+
 \subsection{Pembentukan \textit{Key Schedule}}
+Kunci utama 128 bit dibelah menjadi dua \textit{word} 64 bit $a_0$ dan $b_0$. Untuk
+$i = 1, \dots, 16$:
+\begin{align*}
+  a' &= S_{64}\bigl(\mathrm{rotl}_{64}(a_{i-1}, 13) + \varphi \cdot i \bmod 2^{64}\bigr), \\
+  b' &= b_{i-1} \oplus \mathrm{rotl}_{64}(a', 29), \\
+  (a_i, b_i) &= (b', a'), \\
+  K_i &= a_i \oplus b_i,
+\end{align*}
+dengan $\varphi = \texttt{0x9E3779B97F4A7C15}$ (turunan \textit{golden ratio}), $\mathrm{rotl}_{64}$ rotasi
+kiri 64 bit, dan $S_{64}$ substitusi tiap byte memakai \textit{S-box}.
+
+Perancangan ini bertujuan agar:
+\begin{itemize}
+  \item tiap kunci putaran berbeda walau kunci utama berpola (mis.\ semua nol), melalui konstanta
+    $\varphi \cdot i$ yang berubah tiap putaran;
+  \item hubungan antar kunci putaran tidak linear terhadap kunci utama, melalui \textit{S-box} dan
+    penjumlahan modulo $2^{64}$;
+  \item setiap $K_i$ bergantung pada seluruh 128 bit kunci utama, karena $a$ dan $b$ saling
+    mencampur lewat XOR dan pertukaran.
+\end{itemize}
+Nilai rotasi 13 dan 29 sengaja dipilih (bukan kelipatan 8), sehingga bit dalam satu byte terpecah ke
+byte yang berbeda.
+
 \subsection{\textit{S-Box}}
-\subsection{Permutasi / Rotasi}
-\subsection{Fungsi Putaran}
+Tabel \textit{S-box} 8 bit dibangkitkan secara deterministik oleh program
+\texttt{tools/gen\_sbox.cpp}: tabel identitas diacak dengan \textit{Fisher-Yates shuffle}
+menggunakan PRNG xorshift64 dengan \textit{seed} 3141592653589793 (digit $\pi$), dan diulang
+10.000 kali. Kandidat dengan titik tetap dibuang, kemudian dipilih kandidat dengan
+\textit{nonlinearity} tertinggi dan, jika sama, \textit{differential uniformity} terendah.
+
+\begin{table}[H]
+  \centering
+  \caption{Properti \textit{S-box} \algname{} dibanding pembanding}
+  \begin{tabular}{lcc}
+    \toprule
+    Metrik & \algname{} & AES \\
+    \midrule
+    Bijektif & ya & ya \\
+    Titik tetap $S(x) = x$ & 0 & 0 \\
+    \textit{Nonlinearity} & 98 & 112 \\
+    \textit{Differential uniformity} & 10 & 4 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textit{S-box} ini bersifat bijektif dan tanpa titik tetap, tetapi kualitas nonlinear dan
+diferensialnya berada di kisaran \textit{S-box} acak (\textit{nonlinearity} 98 dan
+\textit{differential uniformity} 10) dan di bawah \textit{S-box} AES yang dikonstruksi secara
+aljabar. Ini keterbatasan pendekatan pencarian acak. Pada \algname{}, keamanan terhadap
+kriptanalisis linear dan diferensial tidak bertumpu pada \textit{S-box} saja, tetapi pada
+kombinasinya dengan akumulator, rotasi, permutasi, dan 16 putaran.
+
+\subsection{Permutasi / Rotasi}\label{sec:perm}
+\paragraph{Permutasi bit.} Bit pada posisi $i$ ($0 \le i < 64$) dipindah ke posisi
+\begin{equation}
+  \pi(i) = 41\,i \bmod 64.
+\end{equation}
+Karena $\gcd(41, 64) = 1$, $\pi$ bijektif. Pengali dipilih agar 8 bit dari satu byte tersebar ke
+sebanyak mungkin byte tujuan, karena tugas utama permutasi di sini adalah memindahkan bit lintas
+byte (\textit{S-box} bekerja per byte). Perbandingan beberapa pengali ganjil:
+
+\begin{table}[H]
+  \centering
+  \caption{Penyebaran 8 bit satu byte ke byte tujuan untuk beberapa pengali}
+  \begin{tabular}{ccc}
+    \toprule
+    Pengali & Byte tujuan berbeda (maks.~8) & Bit yang tidak berpindah \\
+    \midrule
+    37 & 7 & 4 \\
+    \textbf{41} & \textbf{8} & 8 \\
+    43 & 3 & 2 \\
+    47 & 5 & 2 \\
+    53 & 7 & 4 \\
+    59 & 6 & 2 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Pengali 41 adalah satu-satunya yang menyebarkan setiap byte ke 8 byte berbeda. Kelemahannya, 8 bit
+(posisi kelipatan 8) tidak berpindah pada lapisan ini. Hal itu tidak fatal karena bit tersebut
+tetap diolah \textit{S-box}, penjumlahan, dan rotasi pada putaran berikutnya.
+
+\paragraph{Rotasi.} Rotasi kiri 32 bit dipakai di antara dua \textit{pass} sigma-delta
+(Subbab~\ref{sec:fungsi}), dengan jumlah 7 untuk \textit{word} pertama dan 19 untuk \textit{word} kedua.
+Rotasi diperlukan karena bit paling kanan hasil penjumlahan hanya bergantung pada bit paling
+kanan operan (setara XOR), sehingga mudah ditebak. Rotasi memindahkannya ke posisi yang ikut
+terkena \textit{carry} penjumlahan pada langkah berikutnya.
+
+\subsection{Fungsi Putaran}\label{sec:fungsi}
+Fungsi $F(R, K)$ menerima separuh blok $R$ (64 bit) dan kunci putaran $K$ (64 bit), dan
+menghasilkan masker 64 bit. $R$ dan $K$ dipecah menjadi dua \textit{word} 32 bit,
+$R = (w_0, w_1)$ dan $K = (k_0, k_1)$ dengan indeks 0 sebagai bagian atas.
+
+\paragraph{Langkah sigma-delta.} Satu langkah memproses satu \textit{word} $x$ dengan kunci $k$,
+membawa akumulator $a$ dan umpan balik $q_{\text{prev}}$:
+\begin{align*}
+  a &\leftarrow a + (x - q_{\text{prev}}) \bmod 2^{32}, \\
+  q &= S_{32}(a \oplus k), \\
+  q_{\text{prev}} &\leftarrow q,
+\end{align*}
+dengan $S_{32}$ substitusi tiap byte memakai \textit{S-box}. Keluaran langkah ini adalah $q$.
+Nilai awal $a$ dan $q_{\text{prev}}$ adalah 0 pada tiap \textit{pass}.
+
+\paragraph{Urutan fungsi $F$.}
+\begin{enumerate}
+  \item \textbf{\textit{Pass} maju}: $w_0 \leftarrow \mathrm{SD}(w_0, k_0)$, kemudian
+    $w_1 \leftarrow \mathrm{SD}(w_1, k_1)$ dengan akumulator dan umpan balik dibawa dari $w_0$.
+  \item \textbf{Rotasi}: $w_0 \leftarrow \mathrm{rotl}_{32}(w_0, 7)$,
+    $w_1 \leftarrow \mathrm{rotl}_{32}(w_1, 19)$.
+  \item \textbf{\textit{Pass} mundur}: $w_1 \leftarrow \mathrm{SD}(w_1, k_0)$, kemudian
+    $w_0 \leftarrow \mathrm{SD}(w_0, k_1)$, kunci ditukar agar tiap \textit{word} terkena kedua
+    kunci, dan akumulator dimulai dari 0 lagi.
+  \item \textbf{Permutasi}: hasil $w_0 \,\|\, w_1$ dipermutasi dengan $\pi$ pada Subbab~\ref{sec:perm}.
+\end{enumerate}
+
+\paragraph{Hubungan dengan modulator sigma-delta.}
+\begin{table}[H]
+  \centering
+  \caption{Pemetaan konsep sigma-delta ke fungsi $F$}
+  \begin{tabular}{p{4.2cm}p{9.8cm}}
+    \toprule
+    Modulator sigma-delta & Fungsi $F$ \algname{} \\
+    \midrule
+    Akumulator & $a \leftarrow a + (x - q_{\text{prev}}) \bmod 2^{32}$ \\
+    Kuantisasi & Diganti \textit{S-box} dengan XOR kunci (bijektif, tidak \textit{lossy}) \\
+    Umpan balik & $q_{\text{prev}} \leftarrow q$ \\
+    Aliran satu arah & Dijalankan maju lalu mundur agar dua arah \\
+    (tidak ada) & Rotasi antar \textit{word} dan permutasi bit \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Rancangan ini hanya terinspirasi oleh modulator sigma-delta, bukan benar-benar \textit{copy one-to-one}. Kuantisasi 
+aslinya membuang resolusi, yang cocok untuk DAC, tetapi tidak untuk cipher (menganggu \textit{integrity}). Sehingga, 
+pada rancangan ini, diganti dengan \textit{S-box} bijektif. Yang dipertahankan adalah sifat bahwa tiap
+keluaran bergantung pada seluruh masukan sebelumnya melalui state yang dibawa, mirip mode CBC
+atau CFB tempat satu blok bergantung pada blok sebelumnya.

@@ -8,9 +8,171 @@ Masing-masing komponen akan digunakan sebagai landasan perancangan algoritma di 
 mode operasi akan diimplementasikan pada Bab~4.
 
 \subsection{Konsep \textit{Block Cipher}}
+\textit{Block cipher} adalah algoritma enkripsi simetris yang memproses data dalam blok berukuran
+tetap sebesar $n$ bit. Untuk setiap kunci $K$, fungsi enkripsi $E_K$ memetakan satu blok plainteks
+$P \in \{0,1\}^n$ ke satu blok cipherteks $C \in \{0,1\}^n$, dan $E_K$ harus berupa permutasi atas
+$\{0,1\}^n$ agar setiap cipherteks hanya berasal dari tepat satu plainteks. Untuk dekripsi, cari
+fungsi invers $D_K = E_K^{-1}$ dengan kunci yang sama.
+
+Rancangan modern umumnya berbentuk \textit{iterated cipher}: satu fungsi putaran $\rho$ diterapkan
+berulang sebanyak $r$ kali, dan tiap putaran memakai kunci putaran (\textit{round key}) $K_i$ yang
+dibangkitkan dari kunci utama oleh algoritma \textit{key schedule}:
+\begin{equation}
+  C = E_K(P) = \rho_{K_r} \circ \rho_{K_{r-1}} \circ \cdots \circ \rho_{K_1}(P).
+\end{equation}
+
+Shannon \cite{shannon} merumuskan dua sifat yang harus dimiliki sebuah cipher. 
+\begin{enumerate}
+    \item \textit{Confusion}, yakni menyembunyikan hubungan antara kunci dan cipherteks, biasanya lewat substitusi nonlinear.
+    \item \textit{Diffusion}, yakni menyebarkan pengaruh satu bit plainteks atau kunci ke banyak bit cipherteks,
+biasanya lewat transposisi dan pencampuran. Ukuran diffusion yang lazim dipakai adalah
+\textit{avalanche effect}: mengubah satu bit masukan seharusnya mengubah sekitar separuh bit
+keluaran.
+\end{enumerate}
+
+Ukuran blok juga membatasi keamanan. Berdasarkan \textit{birthday paradox}, dua blok cipherteks
+yang sama mulai muncul setelah sekitar $2^{n/2}$ blok. Untuk $n = 64$, hanya dibutuhkan sekitar $2^{32}$
+blok atau 32~GiB data sebelum akhirnya pola dapat diterka dengan mode CBC \cite{sweet32}.
+
 \subsection{Jaringan Feistel / SPN}
+Dua kerangka umum untuk membangun fungsi putaran adalah jaringan Feistel dan \textit{substitution-permutation network} (SPN).
+
+\paragraph{Jaringan Feistel.} Blok dibelah menjadi dua separuh $L$ dan $R$. Pada putaran ke-$i$ \cite{feistel}:
+\begin{equation}
+  L_i = R_{i-1}, \qquad R_i = L_{i-1} \oplus F(R_{i-1}, K_i).
+\end{equation}
+Putaran ini selalu dapat dibalik tanpa memandang isi $F$:
+\begin{equation}
+  R_{i-1} = L_i, \qquad L_{i-1} = R_i \oplus F(L_i, K_i).
+\end{equation}
+Dekripsi cukup menjalankan \textit{ciphertext} ke dalam fungsi $F$ kembali dengan urutan kunci putaran yang dibalik.
+Karena kita tidak memerlukan invers dari $F$ dalam dekripsi, $F$ tidak perlu bijektif.
+Konsekuensinya, pada tiap putaran hanya separuh blok yang berubah. Jadi, dibutuhkan lebih banyak putaran agar seluruh bit saling
+memengaruhi. DES \cite{des} adalah contoh jaringan Feistel.
+
+\paragraph{SPN.} Seluruh blok diubah pada tiap putaran melalui lapisan pencampuran kunci,
+lapisan substitusi (\textit{S-box}), dan lapisan permutasi atau difusi linear. Karena seluruh
+blok diubah, \textit{diffusion} tercapai dalam putaran yang lebih sedikit. Akan tetapi, diperlukan invers $F$ dalam
+dekripsi. Artinya, wajib dipilih $F$ yang bijektif
+bila menggunakan SPN. AES \cite{aes} adalah contoh SPN.
+
+\begin{table}[H]
+  \centering
+  \caption{Perbandingan jaringan Feistel dan SPN}
+  \begin{tabular}{p{4cm}p{5.2cm}p{5.2cm}}
+    \toprule
+    Aspek & Feistel & SPN \\
+    \midrule
+    Bagian blok yang berubah per putaran & Separuh & Seluruhnya \\
+    Syarat fungsi putaran & Bebas, tidak perlu dapat dibalik & Tiap lapisan harus dapat dibalik \\
+    Kode dekripsi & Sama dengan enkripsi, kunci dibalik & Berbeda, memakai invers enkripsi\\
+    Contoh & DES & AES \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \subsection{\textit{S-Box} dan Permutasi}
-\subsection{Modulasi Sigma-Delta (\texorpdfstring{$\Sigma\Delta$}{SD})}
+\paragraph{\textit{S-box}.} \textit{S-box} adalah pemetaan nonlinear $S : \{0,1\}^m \to \{0,1\}^m$
+yang diimplementasikan sebagai tabel. Untuk $m = 8$, tabelnya berisi 256 entri satu byte. Kualitas
+sebuah \textit{S-box} diukur dengan beberapa kriteria:
+\begin{itemize}
+  \item \textbf{Bijektif}, yaitu setiap keluaran muncul tepat sekali.
+  \item \textbf{Titik tetap}, artinya nilai $x$ dengan $S(x) = x$ sebaiknya tidak ada.
+  \item \textbf{\textit{Nonlinearity}}, yaitu seberapa jauh \textit{S-box} dari fungsi linear.
+    Semakin tinggi nilainya, semakin tahan terhadap kriptanalisis linear \cite{matsui}.
+  \item \textbf{\textit{Differential uniformity}}, yaitu seberapa merata perubahan \textit{input}
+    diteruskan menjadi perubahan \textit{output}. Semakin rendah nilainya, semakin tahan terhadap
+    kriptanalisis diferensial \cite{biham,nyberg}.
+\end{itemize}
+Sebagai pembanding, \textit{S-box} AES memiliki \textit{nonlinearity} 112 dan
+\textit{differential uniformity} 4 \cite{aes}.
+
+\paragraph{Permutasi.} Permutasi bit memindahkan bit ke posisi lain tanpa mengubah nilainya.
+Operasi ini linear dan berperan penting untuk \textit{diffusion}. Permutasi menyebarkan bit keluaran satu
+\textit{S-box} ke \textit{S-box} yang berbeda pada putaran berikutnya. Pendekatan ini dipakai
+pula oleh cipher ringan PRESENT \cite{present}.
+
 \subsection{Mode Operasi (ECB, CBC, CFB, OFB, CTR)}
+\textit{Block cipher} hanya memproses satu blok, sehingga untuk data yang lebih panjang
+dibutuhkan mode operasi \cite{nist80038a}. Misalkan $P_j$ dan $C_j$ adalah blok ke-$j$ plainteks
+dan cipherteks, $IV$ vektor inisialisasi, dan $E_K$ fungsi enkripsi blok:
+\begin{align*}
+  \text{ECB:} \quad & C_j = E_K(P_j) \\
+  \text{CBC:} \quad & C_j = E_K(P_j \oplus C_{j-1}), \; C_0 = IV \\
+  \text{CFB:} \quad & C_j = P_j \oplus E_K(C_{j-1}), \; C_0 = IV \\
+  \text{OFB:} \quad & O_j = E_K(O_{j-1}), \; O_0 = IV, \; C_j = P_j \oplus O_j \\
+  \text{CTR:} \quad & C_j = P_j \oplus E_K(\mathit{ctr} + j)
+\end{align*}
+
+\begin{table}[H]
+  \centering
+  \caption{Ringkasan sifat mode operasi}
+  \begin{tabular}{lccp{5cm}}
+    \toprule
+    Mode & Perlu \textit{padding} & Butuh IV & Catatan \\
+    \midrule
+    ECB & Ya & Tidak & Blok sama menghasilkan cipherteks sama \\
+    CBC & Ya & Ya & Enkripsi berantai, tidak dapat diparalelkan \\
+    CFB & Tidak & Ya & Dekripsi juga memakai $E_K$, bukan $D_K$ \\
+    OFB & Tidak & Ya & \textit{Keystream} tidak bergantung data, dekripsi memakai $E_K$ \\
+    CTR & Tidak & Ya (nilai awal \textit{counter}) & Dapat diparalelkan, akses acak, dekripsi memakai $E_K$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Modulasi Sigma-Delta (\texorpdfstring{$\Sigma\Delta$}{SD})}
+Modulasi sigma-delta adalah teknik yang dipakai pada konverter digital-ke-analog (DAC) dan
+analog-ke-digital (ADC) untuk merepresentasikan sinyal beresolusi tinggi dengan keluaran
+beresolusi rendah \cite{schreier}. Modulator orde pertama terdiri atas tiga komponen:
+\begin{itemize}
+  \item \textbf{Akumulator} yang menjumlahkan selisih antara masukan dan keluaran sebelumnya,
+  \item \textbf{Kuantisasi} $Q(\cdot)$ yang membuang resolusi dan menghasilkan keluaran,
+  \item \textit{\textbf{Feedback}} yang mengembalikan keluaran ke akumulator.
+\end{itemize}
+Untuk masukan $x[n]$, keluaran $y[n]$, dan akumulator $v[n]$:
+\begin{equation}
+  v[n] = v[n-1] + x[n] - y[n-1], \qquad y[n] = Q(v[n]).
+\end{equation}
+Jika galat kuantisasi $e[n] = y[n] - v[n]$, keluaran dapat ditulis
+$y[n] = x[n] + e[n] - e[n-1]$. Artinya galat kuantisasi dibawa ke sampel berikutnya (\textit{noise
+shaping}) dan tidak hilang begitu saja.
+
+Dua sifat modulator ini menjadi dasar gagasan perancangan \textit{cipher}. Pertama,
+akumulator dan umpan balik dibawa dari sampel ke sampel, sehingga keluaran ke-$n$ bergantung
+pada seluruh masukan sebelumnya. Mekanisme ini mirip dengan mode CBC atau CFB, tempat satu
+blok bergantung pada blok sebelumnya melalui IV dan umpan balik. Kedua, kuantisasi bersifat
+\textit{lossy}, dalam artian masukan tidak dapat dipulihkan secara persis dari luaran. Sifat ini menjadi
+inspirasi awal rancangan, dengan harapan hilangnya informasi mempersulit penelusuran masukan
+dari keluaran. Pada struktur Feistel, fungsi $F$ tidak perlu memiliki invers, sehingga
+sifat semacam ini tidak mengganggu proses dekripsi.
+
 \subsection{\textit{Padding \& Integrity Verification}}
-\subsection{Related Works}
+\paragraph{\textit{Padding}.} Mode ECB dan CBC mensyaratkan panjang data kelipatan ukuran blok.
+Skema PKCS\#7 \cite{rfc5652} menambahkan $N$ byte bernilai $N$, dengan $1 \le N \le 16$ untuk blok
+16 byte. Jika data sudah kelipatan blok, satu blok penuh tetap ditambahkan sehingga \textit{padding}
+selalu dapat dibuang secara tidak ambigu.
+
+\paragraph{Integritas.} Enkripsi saja tidak menjamin data tidak diubah. Dibutuhkan
+\textit{message authentication code} (MAC). CMAC \cite{rfc4493} membangun MAC dari \textit{block
+cipher}: dua subkunci $K_1$ dan $K_2$ diturunkan dari $E_K(0^{128})$ lewat \textit{doubling} di
+$GF(2^{128})$, lalu data diproses secara berantai seperti CBC dan blok terakhir di-XOR dengan
+$K_1$ atau $K_2$. Pada skema \textit{encrypt-then-MAC}, MAC dihitung atas cipherteks dan harus
+diverifikasi sebelum dekripsi. Kunci enkripsi dan kunci MAC sebaiknya dipisah (\textit{key
+separation}).
+
+\subsection{\textit{Related Works}}
+\begin{itemize}
+  \item \textbf{DES} \cite{des}: Feistel 16 putaran, blok 64 bit, kunci 56 bit. Ukuran blok dan
+    kunci yang kecil membuatnya tidak lagi memadai.
+  \item \textbf{AES} \cite{aes}: SPN dengan blok 128 bit dan 10, 12, atau 14 putaran, memakai
+    \textit{S-box} aljabar, \textit{ShiftRows}, dan \textit{MixColumns}.
+  \item \textbf{PRESENT} \cite{present}: SPN ringan 64 bit dengan lapisan permutasi bit untuk
+    menyebarkan keluaran \textit{S-box}.
+  \item \textbf{Sigma-delta dalam enkripsi}: pada penelusuran kami, modulator sigma-delta
+    ditemukan dalam konteks enkripsi bukan sebagai fungsi putaran \textit{block cipher}, yaitu
+    pada enkripsi data hasil modulator delta/sigma-delta dengan bit acak berbasis
+    \textit{chaos} \cite{chaosdsm} dan pada \textit{quantum noise stream cipher} berbasis
+    modulator sigma-delta dan \textit{optical chaos} \cite{qnsc}. Kami tidak menemukan karya yang
+    memakai prinsip sigma-delta sebagai fungsi putaran \textit{block cipher}, namun
+    penelusuran ini terbatas dan belum mencakup seluruh data jurnal yang ada.
+\end{itemize}
