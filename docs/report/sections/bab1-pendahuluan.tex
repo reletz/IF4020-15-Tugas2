@@ -1,24 +1,180 @@
 \section{Pendahuluan}
 
 \subsection{Latar Belakang}
-% TODO: motivasi perancangan block cipher baru.
+\textit{Block cipher} merupakan komponen dasar kriptografi kunci simetri modern. Selain dipakai langsung
+untuk menjaga kerahasiaan data, \textit{block cipher} juga menjadi bahan penyusun primitif lain, seperti
+\textit{stream cipher} (melalui mode OFB dan CTR), \textit{message authentication code} (misalnya CMAC),
+dan skema \textit{authenticated encryption}~\cite{rinaldi}. Karena perannya yang
+mendasar tersebut, pemahaman tentang cara sebuah \textit{block cipher} dirancang, bukan hanya cara
+memakainya, menjadi bekal penting dalam mempelajari kriptografi.
+
+Landasan perancangan \textit{block cipher} modern berasal dari Shannon~\cite{rinaldi}, yang merumuskan
+dua prinsip: \textit{confusion}, yaitu menyembunyikan hubungan antara kunci dan \textit{ciphertext}, dan
+\textit{diffusion}, yaitu menyebarkan pengaruh setiap bit \textit{plaintext} ke seluruh
+\textit{ciphertext}. Shannon juga mengusulkan \textit{product cipher}, yakni pengulangan operasi
+substitusi dan transposisi yang masing-masing lemah sehingga gabungannya menjadi kuat. Hampir semua
+\textit{block cipher} yang dikenal saat ini, termasuk DES dan AES, adalah \textit{iterated cipher} yang
+mengikuti gagasan tersebut.
+
+Sejarah \textit{block cipher} juga menunjukkan bahwa rancangan yang baik pada masanya dapat menjadi
+tidak memadai. Kunci DES yang hanya 56 bit kini rentan terhadap \textit{exhaustive key search}
+seiring kemajuan daya komputasi~\cite{rinaldi}, dan strukturnya menjadi sasaran
+kriptanalisis diferensial serta kriptanalisis linier~\cite{rinaldi}. Ukuran blok 64 bit
+pun terbukti bermasalah: serangan Sweet32 memanfaatkan \textit{birthday bound} $2^{32}$ blok (sekitar
+32~GB data) untuk memulihkan \textit{plaintext} pada mode CBC~\cite{sweet32}. Pelajaran dari
+kasus-kasus ini, yaitu kunci harus cukup panjang, blok harus cukup lebar, dan komponen nonlinier harus
+tahan terhadap serangan statistik, menjadi pertimbangan langsung dalam rancangan pada laporan ini.
+
+Tugas ini meminta perancangan sebuah \textit{block cipher} baru yang memenuhi prinsip
+\textit{confusion} dan \textit{diffusion}, memakai substitusi berbasis \textit{S-box}, transposisi, serta
+minimal satu operasi tambahan, dijalankan dalam beberapa putaran dengan kunci putaran yang diturunkan
+dari kunci utama, dan tidak menyalin algoritma yang sudah ada. Laporan ini menyajikan \algname{},
+sebuah \textit{block cipher} dengan ukuran blok 128 bit dan kunci 128 bit, beserta implementasinya pada
+lima mode operasi (ECB, CBC, CFB, OFB, CTR), skema \textit{padding}, dan verifikasi integritas data.
+Perlu ditekankan bahwa \algname{} dibuat untuk tujuan pembelajaran. Algoritma ini belum melalui
+kriptanalisis oleh pihak lain, sehingga tidak dimaksudkan untuk menggantikan standar seperti AES pada
+penggunaan nyata.
 
 \subsection{Review Block Cipher Sejenis}
-% TODO: ringkas DES, AES, dll. sebagai pembanding.
+Bagian ini meninjau secara singkat beberapa \textit{block cipher} yang menjadi pembanding, terutama
+dari sisi struktur, komponen nonlinier, dan mekanisme difusinya.
+
+\paragraph{DES.} \textit{Data Encryption Standard}~\cite{rinaldi} beroperasi pada blok 64 bit dengan kunci
+efektif 56 bit dan 16 putaran jaringan Feistel. Fungsi putarannya mengekspansi 32 bit
+menjadi 48 bit, meng-XOR-kannya dengan kunci putaran, melewatkannya ke delapan \textit{S-box}
+$6 \to 4$ bit, lalu menerapkan permutasi P. Struktur Feistel membuat enkripsi dan dekripsi memakai
+rangkaian yang sama dengan urutan kunci dibalik~\cite{rinaldi}. Kelemahan utamanya adalah kunci dan blok
+yang terlalu pendek untuk ukuran saat ini~\cite{rinaldi,sweet32}.
+
+\paragraph{AES.} \textit{Advanced Encryption Standard}~\cite{rinaldi,angraini}, yang berasal dari algoritma
+Rijndael, memakai blok 128 bit dengan kunci 128, 192, atau 256 bit dan 10, 12, atau 14
+putaran. AES bukan Feistel, melainkan \textit{substitution-permutation network} (SPN): seluruh blok
+diproses pada setiap putaran melalui SubBytes (satu \textit{S-box} $8 \times 8$ berbasis invers di
+$GF(2^8)$), ShiftRows, MixColumns, dan AddRoundKey. Rancangannya mengikuti \textit{wide trail
+strategy}, yang memberi batas terbukti terhadap kriptanalisis diferensial dan linier. Konsekuensinya,
+setiap komponen harus memiliki invers dan dekripsi memerlukan rangkaian operasi tersendiri.
+
+\paragraph{Blowfish.} Blowfish~\cite{siregar} adalah Feistel 16 putaran dengan blok 64 bit dan kunci
+32 sampai 448 bit. Fungsi putarannya memakai empat \textit{S-box} $8 \to 32$ bit yang isinya bergantung
+pada kunci, lalu menggabungkan keluarannya dengan penjumlahan modulo $2^{32}$ dan XOR. Blowfish
+menunjukkan bahwa pencampuran operasi dari grup aljabar yang berbeda dapat dipakai sebagai sumber
+nonlinieritas tambahan, gagasan yang sebelumnya dipakai pada IDEA. Ukuran blok 64 bit
+membuatnya rentan terhadap Sweet32~\cite{sweet32}.
+
+\paragraph{Camellia dan TEA.} Camellia menunjukkan bahwa struktur Feistel tetap layak
+untuk blok 128 bit: 18 putaran untuk kunci 128 bit, dengan fungsi putaran berupa lapisan \textit{S-box}
+$8 \times 8$ diikuti lapisan difusi linier. Di sisi lain, TEA adalah Feistel 64 putaran
+tanpa \textit{S-box} sama sekali, yang hanya mengandalkan penjumlahan modulo $2^{32}$, pergeseran, dan
+XOR, serta memakai konstanta turunan rasio emas agar setiap putaran berbeda.
+
+Tabel~\ref{tab:perbandingan} merangkum perbandingan parameter \textit{cipher} tersebut dengan
+\algname{}.
+
 \begin{table}[H]
   \centering
-  \caption{Perbandingan \algname{} dengan block cipher sejenis}
-  \begin{tabular}{llll}
+  \small
+  \caption{Perbandingan \algname{} dengan \textit{block cipher} sejenis}\label{tab:perbandingan}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{>{\raggedright\arraybackslash}p{2.1cm}
+                  >{\raggedright\arraybackslash}p{2.0cm}
+                  >{\raggedright\arraybackslash}p{2.4cm}
+                  >{\raggedright\arraybackslash}p{2.3cm}
+                  >{\raggedright\arraybackslash}p{2.3cm}
+                  >{\raggedright\arraybackslash}p{2.6cm}}
     \toprule
-    Parameter & DES & AES-128 & \algname{} \\
+    Parameter & DES & AES-128 & Blowfish & Camellia-128 & \algname{} \\
     \midrule
-    Ukuran blok & 64 bit & 128 bit & \dots{} \\
-    Ukuran kunci & 56 bit & 128 bit & \dots{} \\
-    Jumlah putaran & 16 & 10 & \dots{} \\
-    Struktur & Feistel & SPN & \dots{} \\
+    Ukuran blok & 64 bit & 128 bit & 64 bit & 128 bit & 128 bit \\
+    Ukuran kunci & 56 bit & 128 bit & 32--448 bit & 128 bit & 128 bit \\
+    Jumlah putaran & 16 & 10 & 16 & 18 & 16 \\
+    Struktur & Feistel & SPN & Feistel & Feistel & Feistel \\
+    \textit{S-box} & 8 buah, $6 \to 4$ bit, tetap
+           & 1 buah, $8 \times 8$, invers $GF(2^8)$
+           & 4 buah, $8 \to 32$ bit, bergantung kunci
+           & 4 buah, $8 \times 8$, tetap
+           & 1 buah, $8 \times 8$, tetap, hasil pencarian acak \\
+    Difusi & Ekspansi E, permutasi P
+           & ShiftRows, MixColumns
+           & Penjumlahan mod $2^{32}$, XOR
+           & Lapisan linier per \textit{byte} (XOR)
+           & \textit{Carry} penjumlahan mod $2^{32}$, rotasi, permutasi bit \\
+    Operasi tambahan & Ekspansi bit
+           & Perkalian di $GF(2^8)$
+           & Penjumlahan mod $2^{32}$
+           & Fungsi $FL$/$FL^{-1}$
+           & Penjumlahan dan pengurangan mod $2^{32}$, rotasi \\
+    Fungsi putaran & Tanpa \textit{state}
+           & Tanpa \textit{state}
+           & Tanpa \textit{state}
+           & Tanpa \textit{state}
+           & Ber-\textit{state} (akumulator dan umpan balik) \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \subsection{Gagasan dan Pendekatan Utama}
-% TODO: ide utama rancangan.
+Rancangan \algname{} bertolak dari tiga keputusan utama.
+
+\paragraph{Blok dan kunci 128 bit.} Ukuran blok 64 bit memenuhi batas minimum spesifikasi, tetapi
+\textit{birthday bound}-nya terlalu kecil untuk mode berantai seperti CBC~\cite{sweet32}. Dengan blok
+128 bit, batas tersebut naik menjadi $2^{64}$ blok. Kunci 128 bit dipilih agar sepanjang ukuran blok
+dan berada jauh di luar jangkauan \textit{exhaustive key search}.
+
+\paragraph{Jaringan Feistel sebagai kerangka.} Blok dibelah menjadi dua bagian 64 bit, $L$ dan $R$,
+lalu diproses sebanyak 16 putaran:
+\begin{equation}
+  L_{i+1} = R_i, \qquad R_{i+1} = L_i \oplus F(R_i, K_i).
+\end{equation}
+Pada struktur ini fungsi $F$ hanya menghasilkan nilai yang di-XOR-kan ke separuh blok lainnya, sehingga
+dekripsi cukup menghitung ulang $F$ dengan urutan kunci putaran dibalik~\cite{rinaldi,sucipta}. Fungsi
+$F$ tidak perlu memiliki invers. Sifat inilah yang dimanfaatkan: $F$ dapat diisi dengan proses yang
+menyimpan \textit{state} dan sulit dibalik, sesuatu yang tidak mungkin dilakukan pada SPN seperti AES.
+Secara teoretis, Luby dan Rackoff menunjukkan bahwa jaringan Feistel menghasilkan
+permutasi pseudoacak selama fungsi putarannya pseudoacak, sehingga upaya perancangan dapat difokuskan
+pada kualitas $F$.
+
+\paragraph{Fungsi putaran berbasis modulasi sigma-delta.} Gagasan pembeda \algname{} adalah meminjam
+struktur modulator sigma-delta ($\Sigma\Delta$) dari bidang pengolahan sinyal.
+Modulator $\Sigma\Delta$ terdiri atas tiga bagian: integrator yang menjumlahkan selisih antara masukan
+dan umpan balik, \textit{quantizer} yang memetakan isi integrator menjadi keluaran, dan jalur umpan
+balik yang mengembalikan keluaran tersebut ke masukan. Ketiganya dipetakan menjadi operasi kriptografi
+pada \textit{word} 32 bit:
+\begin{align}
+  acc      &\leftarrow acc + (x - feedback) \bmod 2^{32}, \\
+  q        &\leftarrow S(acc \oplus k), \\
+  feedback &\leftarrow q.
+\end{align}
+Integrator menjadi akumulator dengan penjumlahan modulo $2^{32}$, \textit{quantizer} menjadi
+\textit{S-box} $8 \times 8$ yang diterapkan pada keempat \textit{byte} akumulator setelah dicampur
+dengan kunci, dan keluaran $q$ diumpanbalikkan ke \textit{word} berikutnya. Dengan demikian satu
+langkah sudah memuat tiga jenis operasi yang secara aljabar tidak saling kompatibel, yaitu penjumlahan
+modulo $2^{32}$, XOR, dan substitusi tabel. \textit{S-box} menjadi sumber utama
+\textit{confusion}, sedangkan \textit{carry} pada penjumlahan dan rantai umpan balik membawa pengaruh
+satu \textit{word} ke \textit{word} lainnya.
+
+Pemetaan langsung tersebut memiliki dua kelemahan yang ditangani dalam rancangan:
+\begin{enumerate}
+  \item Pengaruh hanya mengalir ke depan, yaitu \textit{word} kedua bergantung pada \textit{word}
+        pertama tetapi tidak sebaliknya. Untuk itu $F$ menjalankan dua lintasan, maju lalu mundur,
+        dengan kunci yang ditukar pada lintasan mundur sehingga setiap \textit{word} terkena kedua
+        bagian kunci putaran.
+  \item Bit terendah hasil penjumlahan modulo $2^{32}$ berperilaku linier (setara dengan XOR), dan
+        \textit{carry} hanya merambat ke arah bit yang lebih tinggi. Untuk itu disisipkan rotasi
+        bit di antara kedua lintasan, dan $F$ diakhiri dengan permutasi bit 64 bit yang menyebarkan
+        kedelapan bit dari setiap \textit{byte} ke delapan \textit{byte} yang berbeda.
+\end{enumerate}
+
+Di luar fungsi putaran, dua pendekatan lain melengkapi rancangan. Pertama, \textit{S-box} tidak
+diambil dari \textit{cipher} lain, melainkan dibangkitkan secara deterministik dari sejumlah kandidat
+permutasi acak dan dipilih berdasarkan nonlinieritas tertinggi serta \textit{differential uniformity}
+terendah, dua ukuran ketahanan terhadap kriptanalisis linier dan
+diferensial. Kedua, \textit{key schedule} menurunkan 16 kunci putaran 64 bit dari kunci
+utama dengan gabungan rotasi, penjumlahan konstanta turunan rasio emas yang berbeda di tiap
+putaran, dan \textit{S-box} yang sama, sehingga hubungan antarkunci putaran tidak linier.
+
+Pada tingkat aplikasi, \algname{} dijalankan pada lima mode operasi standar~\cite{rinaldi} dengan
+\textit{padding} PKCS\#7 untuk mode ECB dan CBC. Untuk menjamin integritas data digunakan
+CMAC yang dibangun di atas \algname{} sendiri dalam skema \textit{Encrypt-then-MAC}, dengan
+kunci enkripsi dan kunci MAC yang diturunkan terpisah dari kunci utama. Rincian rancangan dibahas pada
+Bab~3, sedangkan pengujian sifat \textit{avalanche} dan \textit{strict avalanche
+criterion}~\cite{sucipta,angraini,prabowo} disajikan pada Bab~5.
