@@ -1,0 +1,15 @@
+Analisis S-box 8-bit (SBOX, src/core/sbox_table.inc)
+
+Metrik                             S-box ini      Pembanding
+------------------------------------------------------------------------------
+Bijektif                           ya             wajib ya
+Fixed point S[x] = x               0              ideal 0 (AES: 0)
+Opposite fixed point S[x] = ~x     0              ideal 0 (AES: 0)
+Nonlinearity (min komponen)        98             AES 112, acak tipikal 92-100
+Max |Walsh|                        60             AES 32 (makin kecil makin baik)
+Differential uniformity            10             AES 4, acak tipikal 10-12
+Jumlah entri DDT bernilai maks     11             makin sedikit makin baik
+Derajat aljabar komponen (min-max) 6-7            AES 7-7, maks 7
+SAC rata2 (min-max)                0.499 (0.391-0.594) ideal 0.500
+
+Probabilitas diferensial maks = 10/256 = 0.0391, bias linear maks = 60/512 = 0.1172

@@ -1,0 +1,63 @@
+=== 1. Bukti padding (PKCS#7 untuk ECB/CBC, tanpa padding untuk CFB/OFB/CTR) ===
+Plaintext = n byte 'A' (0x41). Kolom kanan: panjang ciphertext mentah tiap mode.
+
+   n  blok terakhir setelah pkcs7_pad (hex)                ECB  CBC  CFB  OFB  CTR
+   0  10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10      16   16    0    0    0
+   1  41 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f      16   16    1    1    1
+  15  41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 01      16   16   15   15   15
+  16  10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10      32   32   16   16   16
+  17  41 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f 0f      32   32   17   17   17
+  31  41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 01      32   32   31   31   31
+  32  10 10 10 10 10 10 10 10 10 10 10 10 10 10 10 10      48   48   32   32   32
+
+Padding selalu ditambahkan (1..16 byte), sehingga n kelipatan 16 mendapat 1 blok penuh 0x10.
+
+=== 2. Avalanche per mode (pesan 64 blok = 1024 byte, 500 percobaan per mode) ===
+Satu bit plaintext dibalik di blok k (1 <= k <= 62); persentase = bit ciphertext berubah.
+
+     | pt: blok sebelum k           pt: blok k                   pt: blok sesudah k           | 1 bit kunci (semua)      | 1 bit IV (semua)        
+mode | rata2 (min-max)              rata2 (min-max)              rata2 (min-max)              | rata2 (min-max)          | rata2 (min-max)         
+-----+--------------------------------------------------------------------------------------------+--------------------------+-------------------------
+ECB  |   0.00% (0.00-0.00)           50.16% (38.28-64.06)          0.00% (0.00-0.00)          |  49.98% (48.26-51.49)    | tidak dipakai           
+CBC  |   0.00% (0.00-0.00)           49.71% (35.16-63.28)         50.01% (43.75-54.46)        |  50.02% (48.37-51.55)    |  49.96% (48.58-51.69)   
+CFB  |   0.00% (0.00-0.00)            0.78% (0.78-0.78)           49.93% (40.62-54.69)        |  49.99% (48.23-51.79)    |  50.00% (48.38-51.90)   
+OFB  |   0.00% (0.00-0.00)            0.78% (0.78-0.78)            0.00% (0.00-0.00)          |  49.99% (48.38-51.44)    |  49.97% (48.06-51.54)   
+CTR  |   0.00% (0.00-0.00)            0.78% (0.78-0.78)            0.00% (0.00-0.00)          |  49.95% (48.32-51.94)    |  49.98% (48.25-51.90)   
+
+Catatan: 1/128 bit = 0,78%. CFB/OFB/CTR meng-XOR plaintext dengan keystream, sehingga 1 bit
+plaintext hanya mengubah 1 bit ciphertext di posisi yang sama (CFB lalu merambat ke blok
+berikutnya lewat feedback). Ini sifat mode, bukan kelemahan cipher.
+
+=== 3. Entropi, chi-square, dan keunikan blok (1024 KiB per input, 10 kunci/IV) ===
+Entropi maks 8 bit/byte. Chi-square df=255: seragam jika ~255 +- 45 (lolos jika p >= 0,05).
+Blok unik = persentase blok 16 byte yang tidak berulang.
+
+Input "teks":
+                entropi    entropi min               chi2 rata2 (min-max)  lolos5%  byte unik  blok unik
+  plain          4.2176              -                         16788099.7        -         30      0.58%
+  ECB            7.9693         7.9664          44315.4 (37479.7-49476.2)     0/10        256      0.59%
+  CBC            7.9998         7.9998                250.3 (228.5-283.9)    10/10        256    100.00%
+  CFB            7.9998         7.9998                267.0 (222.9-302.9)     8/10        256    100.00%
+  OFB            7.9998         7.9998                258.9 (230.5-287.7)    10/10        256    100.00%
+  CTR            7.9998         7.9998                255.8 (210.3-300.7)     9/10        256    100.00%
+
+Input "nol":
+                entropi    entropi min               chi2 rata2 (min-max)  lolos5%  byte unik  blok unik
+  plain          0.0000              -                        267386880.0        -          1      0.00%
+  ECB            3.9205         3.7031 17196377.6 (15728368.0-22019728.0)     0/10         27      0.00%
+  CBC            7.9998         7.9998                239.0 (217.8-262.2)    10/10        256    100.00%
+  CFB            7.9998         7.9998                255.9 (215.7-289.7)    10/10        256    100.00%
+  OFB            7.9998         7.9998                250.5 (218.9-304.7)     9/10        256    100.00%
+  CTR            7.9998         7.9998                259.6 (208.8-301.5)     8/10        256    100.00%
+
+Input "pola":
+                entropi    entropi min               chi2 rata2 (min-max)  lolos5%  byte unik  blok unik
+  plain          8.0000              -                                0.0        -        256      0.02%
+  ECB            7.1834         7.1141     1040368.3 (917484.0-1187827.9)     0/10        161      0.03%
+  CBC            7.9998         7.9998                262.6 (213.1-304.1)     9/10        256    100.00%
+  CFB            7.9998         7.9998                241.0 (217.3-269.4)    10/10        256    100.00%
+  OFB            7.9998         7.9998                253.7 (226.1-282.2)    10/10        256    100.00%
+  CTR            7.9998         7.9998                258.9 (228.6-279.7)    10/10        256    100.00%
+
+Histogram (run pertama) disimpan sebagai hist_<input>.csv di test-results/data
+CSV ringkasan: test-results/data/avalanche_modes.csv, test-results/data/entropy_modes.csv

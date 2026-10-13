@@ -1,4 +1,3 @@
-// src/core/cipher.cpp (DUMMY)
 #include "cipher.hpp"
 #include "round.hpp"
 #include "key_schedule.hpp"

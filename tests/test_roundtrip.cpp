@@ -1,4 +1,3 @@
-// tests/test_roundtrip.cpp
 #include <cstdio>
 #include <cstring>
 #include "cipher.hpp"

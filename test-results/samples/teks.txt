@@ -1,0 +1,17 @@
+Berkas uji teks untuk Tugas 2 IF4020 Kriptografi (Kelompok 15).
+
+Block cipher adalah algoritma kriptografi kunci simetris yang mengenkripsi pesan
+per blok berukuran tetap. Pada rancangan kelompok ini, satu blok berukuran 128 bit
+dan diproses oleh 16 putaran jaringan Feistel. Fungsi putaran F terinspirasi dari
+modulasi sigma-delta: setiap word dijumlahkan ke sebuah akumulator, dilewatkan ke
+S-box bersama round key, lalu hasilnya menjadi umpan balik untuk word berikutnya.
+Setelah satu lintasan maju, word diputar (rotasi 7 dan 19 bit), dilanjutkan lintasan
+mundur, dan diakhiri permutasi bit (i * 41 mod 64).
+
+Program mendukung lima mode operasi: ECB, CBC, CFB, OFB, dan CTR. Mode ECB dan CBC
+memakai padding PKCS#7, sedangkan CFB, OFB, dan CTR bekerja seperti stream cipher
+sehingga panjang ciphertext sama dengan panjang plaintext. Integritas data dijamin
+dengan CMAC (Encrypt-then-MAC): tag diverifikasi lebih dulu sebelum dekripsi.
+
+Baris ini sengaja berisi karakter non-ASCII: kriptografi - "kutipan" - angka 0123456789.
+Panjang berkas ini tidak kelipatan 16 byte, sehingga padding pada ECB/CBC ikut teruji.

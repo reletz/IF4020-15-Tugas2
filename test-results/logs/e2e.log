@@ -1,0 +1,68 @@
+=== 1. Round-Trip Tests (All 5 Modes) ===
+  [PASS] Empty file (0B) round-trip in ecb mode
+  [PASS] Empty file (0B) round-trip in cbc mode
+  [PASS] Empty file (0B) round-trip in cfb mode
+  [PASS] Empty file (0B) round-trip in ofb mode
+  [PASS] Empty file (0B) round-trip in ctr mode
+  [PASS] Boundary size 1B round-trip across all modes
+  [PASS] Boundary size 15B round-trip across all modes
+  [PASS] Boundary size 16B round-trip across all modes
+  [PASS] Boundary size 17B round-trip across all modes
+  [PASS] Boundary size 31B round-trip across all modes
+  [PASS] Boundary size 32B round-trip across all modes
+  [PASS] Boundary size 33B round-trip across all modes
+  [PASS] Arbitrary binary (256B pattern) round-trip in ecb mode
+  [PASS] Arbitrary binary (256B pattern) round-trip in cbc mode
+  [PASS] Arbitrary binary (256B pattern) round-trip in cfb mode
+  [PASS] Arbitrary binary (256B pattern) round-trip in ofb mode
+  [PASS] Arbitrary binary (256B pattern) round-trip in ctr mode
+  [PASS] Multi-megabyte (2 MiB) round-trip in ecb mode
+  [PASS] Multi-megabyte (2 MiB) round-trip in cbc mode
+  [PASS] Multi-megabyte (2 MiB) round-trip in cfb mode
+  [PASS] Multi-megabyte (2 MiB) round-trip in ofb mode
+  [PASS] Multi-megabyte (2 MiB) round-trip in ctr mode
+  [PASS] Inline plaintext (-t) and custom IV (--iv) round-trip
+=== 2. Benchmark (16 MiB Random Binary) ===
+  Benchmark 16 MiB [CTR]: Encrypt 1.131s (14.15 MB/s) | Decrypt 1.094s (14.62 MB/s)
+  [PASS] Benchmark 16 MiB round-trip verified in ctr mode
+  Benchmark 16 MiB [CBC]: Encrypt 1.790s (8.94 MB/s) | Decrypt 1.086s (14.74 MB/s)
+  [PASS] Benchmark 16 MiB round-trip verified in cbc mode
+=== 3. Negative Tests & Tamper Resistance ===
+  [PASS] 1-bit tamper on Magic byte 0 in ecb mode
+  [PASS] 1-bit tamper on IV byte 6 in ecb mode
+  [PASS] 1-bit tamper on Ciphertext byte 22 in ecb mode
+  [PASS] 1-bit tamper on CMAC Tag in ecb mode
+  [PASS] Wrong key rejection in ecb mode
+  [PASS] 1-bit tamper on Magic byte 0 in cbc mode
+  [PASS] 1-bit tamper on IV byte 6 in cbc mode
+  [PASS] 1-bit tamper on Ciphertext byte 22 in cbc mode
+  [PASS] 1-bit tamper on CMAC Tag in cbc mode
+  [PASS] Wrong key rejection in cbc mode
+  [PASS] 1-bit tamper on Magic byte 0 in cfb mode
+  [PASS] 1-bit tamper on IV byte 6 in cfb mode
+  [PASS] 1-bit tamper on Ciphertext byte 22 in cfb mode
+  [PASS] 1-bit tamper on CMAC Tag in cfb mode
+  [PASS] Wrong key rejection in cfb mode
+  [PASS] 1-bit tamper on Magic byte 0 in ofb mode
+  [PASS] 1-bit tamper on IV byte 6 in ofb mode
+  [PASS] 1-bit tamper on Ciphertext byte 22 in ofb mode
+  [PASS] 1-bit tamper on CMAC Tag in ofb mode
+  [PASS] Wrong key rejection in ofb mode
+  [PASS] 1-bit tamper on Magic byte 0 in ctr mode
+  [PASS] 1-bit tamper on IV byte 6 in ctr mode
+  [PASS] 1-bit tamper on Ciphertext byte 22 in ctr mode
+  [PASS] 1-bit tamper on CMAC Tag in ctr mode
+  [PASS] Wrong key rejection in ctr mode
+=== 4. Truncation and Foreign Format Rejection ===
+  [PASS] Truncated container (cut last byte)
+  [PASS] Truncated container (37 bytes < min container size)
+  [PASS] Truncated container (0 bytes)
+  [PASS] Foreign format rejection (random 100 bytes)
+=== 5. Cryptographic Properties (Freshness & Pattern Weakness) ===
+  [PASS] IV freshness verified in cbc mode (unique ciphertext per run)
+  [PASS] IV freshness verified in cfb mode (unique ciphertext per run)
+  [PASS] IV freshness verified in ofb mode (unique ciphertext per run)
+  [PASS] IV freshness verified in ctr mode (unique ciphertext per run)
+  [PASS] ECB pattern weakness demonstrated: identical blocks produce identical ciphertext blocks
+  [PASS] CBC pattern resistance verified: identical blocks produce distinct ciphertext blocks
+=== All E2E tests passed cleanly (60 checks) ===

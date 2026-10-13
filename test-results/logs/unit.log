@@ -1,0 +1,34 @@
+g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_container.cpp -o build/test_container
+== test_container
+--- Unit Test container (SecureEnvelope) ---
+
+Test Summary: 784 passed, 0 failed.
+ALL TESTS PASSED
+g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_mac.cpp -o build/test_mac
+== test_mac
+--- Unit Test mac (CMAC & derive_keys) ---
+
+Test Summary: 1011 passed, 0 failed.
+ALL TESTS PASSED
+g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_modes.cpp -o build/test_modes
+== test_modes
+
+Test Summary: 148 passed, 0 failed.
+ALL TESTS PASSED
+g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_padding.cpp -o build/test_padding
+== test_padding
+
+Test Summary: 133 passed, 0 failed.
+ALL TESTS PASSED
+g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_permutation.cpp -o build/test_permutation
+== test_permutation
+PASS
+g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_roundtrip.cpp -o build/test_roundtrip
+== test_roundtrip
+PASS
+g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_util.cpp -o build/test_util
+== test_util
+--- Unit Test util ---
+
+Test Summary: 32 passed, 0 failed.
+ALL TESTS PASSED

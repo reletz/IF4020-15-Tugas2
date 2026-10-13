@@ -22,8 +22,8 @@
  * @endcode
  *
  * Tiap langkah sigma-delta menyimpan state (akumulator dan feedback), jadi F
- * uninvertable. Karena Feistel tidak butuh invers F:,
- * dekripsi cukup menggunakan F lagi dengan input yang sama.
+ * tidak bisa dibalik. Feistel tidak butuh invers F, sehingga dekripsi cukup
+ * menghitung F lagi dengan input yang sama.
  *
  * @param[in] r Setengah blok (64 bit).
  * @param[in] k Round key (64 bit).

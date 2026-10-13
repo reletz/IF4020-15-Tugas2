@@ -1,4 +1,3 @@
-// tests/test_permutation.cpp
 #include <cstdio>
 #include <set>
 #include "permutation.hpp"

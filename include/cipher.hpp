@@ -74,9 +74,8 @@ public:
 class CustomCipher : public BlockCipher {
 public:
     /**
-     * @brief Build cipher dan run key schedule.
-     * @param[in] master_key Master key, @ref KEY_SIZE byte. Derive ke round
-     *                       key saat constructor dijalankan; pointer tidak disimpan.
+     * @brief Buat cipher dan bangkitkan round key dari master key.
+     * @param[in] master_key Master key, @ref KEY_SIZE byte. Pointer tidak disimpan.
      */
     explicit CustomCipher(const uint8_t master_key[KEY_SIZE]);
 

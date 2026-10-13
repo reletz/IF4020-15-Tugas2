@@ -19,6 +19,10 @@
  */
 class PaddingError : public std::runtime_error {
 public:
+    /**
+     * @brief Buat exception dengan pesan kesalahan.
+     * @param[in] msg Penjelasan kenapa padding tidak valid.
+     */
     explicit PaddingError(const std::string& msg) : std::runtime_error(msg) {}
 };
 

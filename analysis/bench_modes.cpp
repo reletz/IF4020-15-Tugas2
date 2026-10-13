@@ -53,6 +53,7 @@ struct Op {
   const char *note;  ///< Keterangan paralelisasi.
 };
 
+/// Daftar operasi yang dibenchmark (mode × arah enkripsi/dekripsi).
 static const Op OPS[] = {
     {"ECB", "enc", modes::ecb_encrypt, nullptr, "paralel"},
     {"ECB", "dec", modes::ecb_decrypt, modes::ecb_encrypt, "paralel"},
@@ -150,6 +151,8 @@ static void usage(const char *prog) {
 
 /**
  * @brief Benchmark semua mode × ukuran, serial vs paralel.
+ * @param[in] argc Jumlah argumen.
+ * @param[in] argv Argumen (lihat opsi di deskripsi file).
  * @return 0 kalau output serial dan paralel identik di semua kasus, 1 kalau ada yang beda.
  */
 int main(int argc, char **argv) {

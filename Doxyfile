@@ -1,12 +1,15 @@
-PROJECT_NAME           = "BlockCipher"
+PROJECT_NAME           = "NAMA_ALGORITMA"
+PROJECT_BRIEF          = "Block cipher Feistel 128-bit dengan fungsi putaran sigma-delta"
 OUTPUT_DIRECTORY       = build
 INPUT_ENCODING         = UTF-8
 
 # Dokumentasi
-INPUT                  = include src analysis
-FILE_PATTERNS          = *.hpp *.cpp
+INPUT                  = docs/api/mainpage.md include src analysis
+FILE_PATTERNS          = *.hpp *.cpp *.md
 RECURSIVE              = YES
 EXTRACT_STATIC         = YES
+USE_MDFILE_AS_MAINPAGE = docs/api/mainpage.md
+MARKDOWN_SUPPORT       = YES
 
 # Warning (Complete)
 WARN_IF_UNDOCUMENTED   = YES
@@ -15,4 +18,5 @@ WARN_NO_PARAMDOC       = YES
 
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
 QUIET                  = YES

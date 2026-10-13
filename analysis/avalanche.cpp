@@ -20,7 +20,7 @@
 #include <cstring>
 #include "cipher.hpp"
 
-/// Jumlah attemp (pasangan kunci dan plaintext acak).
+/// Jumlah percobaan (pasangan kunci dan plaintext acak).
 static const int TRIALS = 1000;
 /// Ukuran block dalam bit.
 constexpr size_t BLOCK_BITS = BLOCK_SIZE * 8;
@@ -100,7 +100,7 @@ struct Stat {
 
 /**
  * @brief Tes avalanche untuk bit plaintext dan bit kunci.
- * @return 0 (only report, tidak menentukan pass or fail).
+ * @return 0 (hanya mencetak hasil).
  */
 int main() {
   Stat pt_stat, key_stat;

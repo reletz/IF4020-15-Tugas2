@@ -1,0 +1,10 @@
+SAC (2000 percobaan) 
+Bit plaintext -> bit ciphertext (128 x 128 pasangan bit)
+  rata-rata 50.00%  min 45.75%  max 54.30%
+  simpangan terburuk: 3.8 sigma (input bit 65 -> output bit 122)
+  sel di luar 4 sigma: 0 dari 16384 (acak murni ~1.0)
+
+Bit kunci -> bit ciphertext (128 x 128 pasangan bit)
+  rata-rata 49.99%  min 45.70%  max 54.20%
+  simpangan terburuk: 3.8 sigma (input bit 102 -> output bit 35)
+  sel di luar 4 sigma: 0 dari 16384 (acak murni ~1.0)

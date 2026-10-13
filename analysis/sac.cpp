@@ -26,7 +26,7 @@
 #include <cstring>
 #include "cipher.hpp"
 
-/// Jumlah attempt (pasangan kunci dan plaintext acak).
+/// Jumlah percobaan (pasangan kunci dan plaintext acak).
 static const int TRIALS = 2000;
 /// Ukuran block dalam bit.
 constexpr size_t BLOCK_BITS = BLOCK_SIZE * 8;
@@ -77,10 +77,10 @@ static inline int get_bit(const uint8_t *p, size_t i) {
  * - sel dengan simpangan terbesar (dalam satuan sigma), 
  * - serta jumlah sel di luar 4 sigma
  *
- * @param[in] name    Label bagian laporan.
+ * @param[in] name    Label bagian keluaran.
  * @param[in] in_bits Jumlah bit input yang dibalik (jumlah baris matriks).
  * @param[in] counts  counts[i][j] = berapa kali bit output j berubah saat
- *                    bit input i dibalik, dari @c TRIALS attempt.
+ *                    bit input i dibalik, dari @c TRIALS percobaan.
  */
 static void report(const char *name, size_t in_bits,
                    const int counts[][BLOCK_BITS]) {
@@ -112,7 +112,7 @@ static void report(const char *name, size_t in_bits,
 
 /**
  * @brief SAC untuk bit plaintext dan bit kunci.
- * @return 0 (only report, tidak menentukan pass or fail).
+ * @return 0 (hanya mencetak hasil).
  */
 int main() {
   static int pt_counts[BLOCK_BITS][BLOCK_BITS];

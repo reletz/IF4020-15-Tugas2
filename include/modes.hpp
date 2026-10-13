@@ -36,7 +36,7 @@ void ctr_at(const uint8_t iv[BLOCK_SIZE], uint64_t i, uint8_t out[BLOCK_SIZE]);
  * @brief Enkripsi data menggunakan mode Electronic Codebook (ECB).
  *
  * Setiap blok 16 byte dienkripsi secara independen: C_i = E(P_i).
- * Mendukung akselerasi OpenMP multi-thread jika ukuran data >= @ref PARALLEL_THRESHOLD_BLOCKS.
+ * Mendukung akselerasi OpenMP multi-thread jika ukuran data >= @ref modes::PARALLEL_THRESHOLD_BLOCKS.
  *
  * @param[in] cipher Objek block cipher yang digunakan.
  * @param[in] iv     Parameter IV (diabaikan pada mode ECB, boleh nullptr).
@@ -50,7 +50,7 @@ util::Bytes ecb_encrypt(const BlockCipher& cipher, const uint8_t* iv, const util
  * @brief Dekripsi data menggunakan mode Electronic Codebook (ECB).
  *
  * Setiap blok 16 byte didekripsi secara independen: P_i = D(C_i).
- * Mendukung akselerasi OpenMP multi-thread jika ukuran data >= @ref PARALLEL_THRESHOLD_BLOCKS.
+ * Mendukung akselerasi OpenMP multi-thread jika ukuran data >= @ref modes::PARALLEL_THRESHOLD_BLOCKS.
  *
  * @param[in] cipher Objek block cipher yang digunakan.
  * @param[in] iv     Parameter IV (diabaikan pada mode ECB, boleh nullptr).
@@ -130,10 +130,24 @@ util::Bytes cfb_decrypt(const BlockCipher& cipher, const uint8_t* iv, const util
  */
 util::Bytes ofb_crypt(const BlockCipher& cipher, const uint8_t* iv, const util::Bytes& in);
 
+/**
+ * @brief Alias enkripsi OFB, sama dengan @ref modes::ofb_crypt.
+ * @param[in] cipher Objek block cipher yang digunakan.
+ * @param[in] iv     Inisialisasi vektor (IV), panjang @ref BLOCK_SIZE byte.
+ * @param[in] in     Plaintext sembarang.
+ * @return util::Bytes Ciphertext (panjang sama dengan plaintext).
+ */
 inline util::Bytes ofb_encrypt(const BlockCipher& cipher, const uint8_t* iv, const util::Bytes& in) {
     return ofb_crypt(cipher, iv, in);
 }
 
+/**
+ * @brief Alias dekripsi OFB, sama dengan @ref modes::ofb_crypt (keystream yang sama di-XOR ulang).
+ * @param[in] cipher Objek block cipher yang digunakan.
+ * @param[in] iv     Inisialisasi vektor (IV), panjang @ref BLOCK_SIZE byte.
+ * @param[in] in     Ciphertext sembarang.
+ * @return util::Bytes Plaintext (panjang sama dengan ciphertext).
+ */
 inline util::Bytes ofb_decrypt(const BlockCipher& cipher, const uint8_t* iv, const util::Bytes& in) {
     return ofb_crypt(cipher, iv, in);
 }
@@ -142,7 +156,7 @@ inline util::Bytes ofb_decrypt(const BlockCipher& cipher, const uint8_t* iv, con
  * @brief Enkripsi/dekripsi data menggunakan mode Counter (CTR).
  *
  * Formula: K_i = E(IV + i), C_i = P_i ^ K_i (dan sebaliknya).
- * Mendukung akselerasi OpenMP multi-thread penuh jika ukuran data >= @ref PARALLEL_THRESHOLD_BLOCKS.
+ * Mendukung akselerasi OpenMP multi-thread penuh jika ukuran data >= @ref modes::PARALLEL_THRESHOLD_BLOCKS.
  *
  * @param[in] cipher Objek block cipher yang digunakan.
  * @param[in] iv     Nilai counter awal 128-bit (IV), panjang @ref BLOCK_SIZE byte.
@@ -152,10 +166,24 @@ inline util::Bytes ofb_decrypt(const BlockCipher& cipher, const uint8_t* iv, con
  */
 util::Bytes ctr_crypt(const BlockCipher& cipher, const uint8_t* iv, const util::Bytes& in);
 
+/**
+ * @brief Alias enkripsi CTR, sama dengan @ref modes::ctr_crypt.
+ * @param[in] cipher Objek block cipher yang digunakan.
+ * @param[in] iv     Nilai counter awal 128-bit (IV), panjang @ref BLOCK_SIZE byte.
+ * @param[in] in     Plaintext sembarang.
+ * @return util::Bytes Ciphertext (panjang sama dengan plaintext).
+ */
 inline util::Bytes ctr_encrypt(const BlockCipher& cipher, const uint8_t* iv, const util::Bytes& in) {
     return ctr_crypt(cipher, iv, in);
 }
 
+/**
+ * @brief Alias dekripsi CTR, sama dengan @ref modes::ctr_crypt (keystream yang sama di-XOR ulang).
+ * @param[in] cipher Objek block cipher yang digunakan.
+ * @param[in] iv     Nilai counter awal 128-bit (IV), panjang @ref BLOCK_SIZE byte.
+ * @param[in] in     Ciphertext sembarang.
+ * @return util::Bytes Plaintext (panjang sama dengan ciphertext).
+ */
 inline util::Bytes ctr_decrypt(const BlockCipher& cipher, const uint8_t* iv, const util::Bytes& in) {
     return ctr_crypt(cipher, iv, in);
 }

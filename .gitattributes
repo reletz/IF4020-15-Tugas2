@@ -1,0 +1,11 @@
+*.sh     text eol=lf
+*.py     text eol=lf
+Makefile text eol=lf
+
+# Hasil uji disimpan apa adanya supaya .enc tetap cocok dengan plaintext-nya
+test-results/** -text
+
+*.enc      binary
+*.bin      binary
+*.png      binary
+cipher_cli binary

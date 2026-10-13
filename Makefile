@@ -13,6 +13,7 @@ BUILD_DIR := build
 APP_NAME  := cipher_cli
 SBOX_INC  := $(CORE_DIR)/sbox_table.inc
 BENCH_CSV ?= docs/report/data/bench.csv
+RESULTS_DIR ?= test-results
 
 LIB_SRCS   := $(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/*/*.cpp))
 TEST_NAMES := $(basename $(notdir $(wildcard tests/test_*.cpp)))
@@ -43,7 +44,7 @@ else
     RM      = rm -f $1
 endif
 
-.PHONY: all app test avalanche sac bench bench-csv sbox analyze clean $(RUN_TESTS) test-util test-mac test-container test-e2e test-d
+.PHONY: all app test avalanche sac bench bench-csv sbox analyze mode-analysis rounds results docs clean $(RUN_TESTS) test-util test-mac test-container test-e2e test-d
 
 all: app
 
@@ -88,6 +89,18 @@ bench-csv: $(BUILD_DIR)/bench_modes$(EXE)
 sac: $(BUILD_DIR)/sac$(EXE)
 	@$(call run,$<)
 
+$(BUILD_DIR)/mode_analysis$(EXE): analysis/mode_analysis.cpp $(LIB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
+
+mode-analysis: $(BUILD_DIR)/mode_analysis$(EXE)
+	@$(call run,$<) --out $(RESULTS_DIR)/data $(ANALYSIS_ARGS)
+
+$(BUILD_DIR)/rounds$(EXE): analysis/rounds.cpp $(LIB_SRCS) | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(LIB_SRCS) $< -o $@
+
+rounds: $(BUILD_DIR)/rounds$(EXE)
+	@$(call run,$<) $(ROUNDS_ARGS)
+
 $(BUILD_DIR)/gen_sbox$(EXE): tools/gen_sbox.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $< -o $@
 
@@ -109,6 +122,14 @@ test-e2e: app
 	CLI="$(BUILD_DIR)/$(APP_NAME)$(EXE)" bash tests/e2e.sh
 
 test-d: test-util test-mac test-container test-e2e
+
+# Jalankan semua tes dan analisis, simpan log/CSV/grafik ke $(RESULTS_DIR)/
+results: app $(BUILD_DIR)/mode_analysis$(EXE) $(BUILD_DIR)/rounds$(EXE) $(BUILD_DIR)/avalanche$(EXE) $(BUILD_DIR)/sac$(EXE) $(BUILD_DIR)/analyze_sbox$(EXE)
+	OUT="$(RESULTS_DIR)" bash tests/run_all.sh
+
+# API documentation (Doxygen) ke build/html
+docs:
+	doxygen Doxyfile
 
 clean:
 	-$(RMDIR)
