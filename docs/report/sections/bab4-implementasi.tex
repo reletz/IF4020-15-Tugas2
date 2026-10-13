@@ -1,22 +1,128 @@
 \section{Implementasi dan Simulasi}
+Bab ini menguraikan implementasi \algname{} dalam aplikasi \textit{Command Line Interface} (CLI), hasil pengujian simulasi enkripsi dan dekripsi menggunakan berkas uji yang \textit{reproducible}, mekanisme penanganan \textit{padding}, serta verifikasi integritas data berbasis \textit{Encrypt-then-MAC}.
+
 \subsection{Deskripsi Program}
-\subsection{Hasil Uji Enkripsi dan Dekripsi}
-\subsubsection{Berkas Teks}
-\subsubsection{Berkas Biner}
+Aplikasi CLI (\texttt{cipher\_cli}) dibangun menggunakan C++17 tanpa \textit{dependency} pustaka kriptografi pihak ketiga. Komponen inti (fungsi putaran $F$, ekspansi kunci, lima mode cipher, \textit{padding}, dan CMAC) diimplementasikan langsung pada kode sumber, dengan pemanfaatan OpenMP untuk mempercepat mode ECB, CTR, serta dekripsi CBC dan CFB.
+
+\subsubsection{Antarmuka Perintah dan Format Kontainer}
+Program menyediakan tiga perintah operasional:
+\begin{itemize}
+  \item \texttt{keygen [-f] -o <path>}: Membangkitkan kunci acak 128 bit (32 hex) menggunakan CSPRNG sistem operasi (\texttt{getentropy}) dengan izin berkas POSIX \texttt{0600} (\texttt{S\_IRUSR | S\_IWUSR}).
+  \item \texttt{encrypt [-f] -m <mode> (-k <hex> | --key-file <path>) [--iv <hex>]}\linebreak
+    \texttt{(-i <in> | -t <teks>) -o <out>}: Mengenkripsi berkas atau teks masukan ke berkas keluaran.
+  \item \texttt{decrypt [-f] (-k <hex> | --key-file <path>) -i <in> -o <out>}: Mendekripsi berkas kembali ke data aslinya (mode dibaca otomatis dari \textit{header}).
+\end{itemize}
+
+Seluruh data terenkripsi dikemas dalam format biner \textbf{Container v1} dengan \textit{overhead} tetap 38 byte.
+
 \begin{table}[H]
   \centering
-  \caption{Hasil uji per mode operasi}
-  \begin{tabular}{lccc}
+  \caption{Format Kontainer v1}\label{tab:container_layout}
+  \begin{tabular}{lcp{9.5cm}}
     \toprule
-    Mode & Berkas teks & Berkas biner & Dekripsi sesuai \\
+    Field & Ukuran & Deskripsi \\
     \midrule
-    ECB & & & \\
-    CBC & & & \\
-    CFB & & & \\
-    OFB & & & \\
-    CTR & & & \\
+    \textit{Magic Bytes} & 4 Byte & Pengenal format ASCII \texttt{"IF15"} (\texttt{0x49 0x46 0x31 0x35}) \\
+    \textit{Version}     & 1 Byte & Nomor versi protokol (\texttt{0x01}) \\
+    \textit{Mode ID}     & 1 Byte & ID mode: \texttt{0x01}=ECB, \texttt{0x02}=CBC, \texttt{0x03}=CFB, \texttt{0x04}=OFB, \texttt{0x05}=CTR \\
+    \textit{IV}          & 16 Byte & Vektor inisialisasi / counter awal (diisi byte nol pada mode ECB) \\
+    \textit{Payload}     & $N$ Byte & Data terenkripsi ($N$ kelipatan 16 pada ECB/CBC, $N = L$ pada mode aliran) \\
+    \textit{CMAC Tag}    & 16 Byte & Tag autentikasi integritas RFC 4493 atas \textit{header} dan \textit{payload} \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+Penyertaan \textit{header} (Mode ID dan IV) ke dalam tag CMAC mencegah \textit{Mode-Downgrade Attack} (penyerang memanipulasi byte mode ke ECB) dan \textit{IV Bit-Flipping Attack} pada mode CBC.
+
+\subsubsection{Konvensi \textit{Exit Code} dan Keamanan Runtime}
+Untuk memudahkan otomasi pengujian, \texttt{cipher\_cli} menetapkan \textit{exit code} terstruktur: \texttt{0} (sukses), \texttt{1} (kesalahan argumen/CLI), \texttt{2} (kesalahan I/O berkas), \texttt{3} (format rusak/\texttt{FormatError}), dan \texttt{4} (autentikasi gagal/\texttt{AuthError}).
+
+\subsection{Hasil Uji Enkripsi dan Dekripsi}
+Pengujian simulasi dilakukan menggunakan berkas uji yang telah tersedia di repositori (\texttt{test-results/samples/}) agar hasil bersifat deterministik dan \textit{reproducible}:
+\begin{itemize}
+  \item \textbf{Berkas Teks}: \texttt{teks.txt} (1.116 byte, SHA-256: \texttt{0118caf99b62bdf9\dots{}}), memuat teks multibaris, karakter non-ASCII, dan panjang bukan kelipatan 16.
+  \item \textbf{Berkas Biner}: \texttt{gambar.png} (949 byte, SHA-256: \texttt{5acafa9454163dc6\dots{}}), berkas citra format PNG.
+\end{itemize}
+
+Pengujian menggunakan pasangan kunci dan IV tetap:
+\begin{align*}
+  K_{\text{master}} &= \texttt{000102030405060708090a0b0c0d0e0f} \\
+  \text{IV} &= \texttt{0f0e0d0c0b0a09080706050403020100} \quad \text{(khusus non-ECB)}
+\end{align*}
+
+Prosedur eksekusi enkripsi, dekripsi, dan verifikasi kesamaan biner pada terminal dapat direproduksi melalui perintah:
+\begin{lstlisting}[language=bash]
+# Enkripsi dan dekripsi berkas teks pada mode CBC
+./cipher_cli encrypt -m cbc -k 000102030405060708090a0b0c0d0e0f --iv 0f0e0d0c0b0a09080706050403020100 -i test-results/samples/teks.txt -o out.enc
+./cipher_cli decrypt -k 000102030405060708090a0b0c0d0e0f -i out.enc -o out.dec
+
+# Verifikasi kesamaan bit-demi-bit
+cmp -s test-results/samples/teks.txt out.dec && echo "Identik 100%"
+\end{lstlisting}
+
+\subsubsection{Berkas Teks}
+Pada berkas \texttt{teks.txt} (1.116 byte), mode ECB dan CBC menerapkan \textit{padding} PKCS\#7 sehingga \textit{payload} menjadi 1.120 byte dan kontainer berukuran 1.158 byte ($22 + 1.120 + 16$). Pada mode CFB, OFB, dan CTR, \textit{payload} tepat 1.116 byte dan kontainer berukuran 1.154 byte ($22 + 1.116 + 16$). Seluruh hasil dekripsi pada kelima mode terverifikasi 100\% identik dengan berkas sumber via perintah \texttt{cmp}.
+
+\subsubsection{Berkas Biner}
+Pada berkas \texttt{gambar.png} (949 byte), mode ECB dan CBC menghasilkan \textit{payload} 960 byte dan kontainer 998 byte. Mode aliran menghasilkan \textit{payload} 949 byte dan kontainer 987 byte. Seluruh hasil dekripsi memiliki nilai hash SHA-256 yang identik dan gambar PNG dapat dibuka secara visual tanpa kerusakan struktur \textit{chunk}.
+
+Rangkuman kuantitatif hasil pengujian \textit{round-trip} disajikan pada Tabel~\ref{tab:roundtrip_results}.
+
+\begin{table}[H]
+  \centering
+  \caption{Hasil Uji Round-Trip Enkripsi dan Dekripsi Berkas Uji}\label{tab:roundtrip_results}
+  \begin{tabular}{llcccc}
+    \toprule
+    Berkas & Mode & Plainteks & Kontainer & Payload & Status Dekripsi \\
+    \midrule
+    \texttt{teks.txt}   & ECB & 1.116 B & 1.158 B & 1.120 B & Identik (\texttt{pass}) \\
+    \texttt{teks.txt}   & CBC & 1.116 B & 1.158 B & 1.120 B & Identik (\texttt{pass}) \\
+    \texttt{teks.txt}   & CFB & 1.116 B & 1.154 B & 1.116 B & Identik (\texttt{pass}) \\
+    \texttt{teks.txt}   & OFB & 1.116 B & 1.154 B & 1.116 B & Identik (\texttt{pass}) \\
+    \texttt{teks.txt}   & CTR & 1.116 B & 1.154 B & 1.116 B & Identik (\texttt{pass}) \\
+    \midrule
+    \texttt{gambar.png} & ECB & 949 B   & 998 B   & 960 B   & Identik (\texttt{pass}) \\
+    \texttt{gambar.png} & CBC & 949 B   & 998 B   & 960 B   & Identik (\texttt{pass}) \\
+    \texttt{gambar.png} & CFB & 949 B   & 987 B   & 949 B   & Identik (\texttt{pass}) \\
+    \texttt{gambar.png} & OFB & 949 B   & 987 B   & 949 B   & Identik (\texttt{pass}) \\
+    \texttt{gambar.png} & CTR & 949 B   & 987 B   & 949 B   & Identik (\texttt{pass}) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \subsection{Penanganan Padding}
+Mode berbasis blok (ECB dan CBC) mewajibkan data merupakan kelipatan dari ukuran blok (16 byte). Program mengimplementasikan skema \textit{padding} PKCS\#7 sesuai RFC 5652~\cite{rfc5652}. Untuk panjang data $L$ byte, jumlah byte \textit{padding} $p$ bernilai:
+\begin{equation}
+  p = 16 - (L \bmod 16)
+\end{equation}
+di mana setiap byte \textit{padding} bernilai heksadesimal $p$:
+\begin{itemize}
+  \item \texttt{teks.txt}: $L = 1.116 \implies 1.116 \bmod 16 = 12 \implies p = 4$. Ditambahkan 4 byte \texttt{0x04 0x04 0x04 0x04}.
+  \item \texttt{gambar.png}: $L = 949 \implies 949 \bmod 16 = 5 \implies p = 11$. Ditambahkan 11 byte \texttt{0x0B}.
+  \item Data kelipatan 16 ($L \bmod 16 = 0$): Ditambahkan 1 blok penuh (16 byte \texttt{0x10}) untuk menjamin determinisme saat \textit{unpadding}.
+\end{itemize}
+
+Sebaliknya, mode CFB, OFB, dan CTR beroperasi sebagai \textit{stream cipher} yang melakukan XOR langsung antara \textit{keystream} dan data, sehingga tidak memerlukan \textit{padding} ($p = 0$).
+
 \subsection{Verifikasi Integritas Data}
+Integritas data dijamin menggunakan metode \textbf{Encrypt-then-MAC (EtM)} berbasis CMAC (RFC 4493)~\cite{rfc4493} dengan tag 128 bit (16 byte).
+
+\subsubsection{Pemisahan Kunci dan Perbandingan Waktu-Konstan}
+Sistem menerapkan dua prinsip perancangan kriptografi defensif:
+\begin{enumerate}
+  \item \textbf{Pemisahan Kunci (\textit{Key Separation})}: Kunci enkripsi ($K_{\text{enc}}$) dan kunci MAC ($K_{\text{mac}}$) diturunkan secara terpisah dari $K_{\text{master}}$ menggunakan fungsi pembangkit semu (PRF):
+  \begin{equation}
+    K_{\text{enc}} = \text{CIPH}_{K_{\text{master}}}(0^{15} \,\|\, \text{0x01}), \quad
+    K_{\text{mac}} = \text{CIPH}_{K_{\text{master}}}(0^{15} \,\|\, \text{0x02})
+  \end{equation}
+  Pemisahan ini menjamin independensi matematis antara kerahasiaan dan integritas data.
+  \item \textbf{Komparasi Waktu-Konstan}: Pengecekan tag CMAC menggunakan fungsi akumulasi bitwise OR branchless (\texttt{util::constant\_time\_equal}):
+  \begin{equation}
+    \Delta = \bigvee_{i=0}^{15} (T_{\text{dihitung}}[i] \oplus T_{\text{diterima}}[i])
+  \end{equation}
+  Fungsi ini membutuhkan waktu eksekusi yang konstan tanpa keluar lebih awal (\textit{early exit}), sehingga meniadakan serangan kanal samping waktu (\textit{timing attack}).
+\end{enumerate}
+
+\subsubsection{Prinsip Fail-Stop}
+Pada proses dekripsi, tag CMAC diverifikasi \textbf{sebelum} mendekripsi \textit{ciphertext} atau memeriksa \textit{padding}. Jika verifikasi gagal, sistem langsung berhenti (\textit{fail-stop}). Mekanisme ini mengeliminasi peluang terjadinya serangan \textit{Padding Oracle} (Vaudenay) karena dekriptor tidak pernah memproses data yang terkorupsi.
+
