@@ -84,7 +84,7 @@ bench: $(BUILD_DIR)/bench_modes$(EXE)
 bench-csv: $(BUILD_DIR)/bench_modes$(EXE)
 	@mkdir -p $(dir $(BENCH_CSV))
 	$(call run,$<) --csv $(BENCH_ARGS) > $(BENCH_CSV)
-	@echo Hasil disimpan ke $(BENCH_CSV)
+	@echo Results saved to $(BENCH_CSV)
 
 sac: $(BUILD_DIR)/sac$(EXE)
 	@$(call run,$<)

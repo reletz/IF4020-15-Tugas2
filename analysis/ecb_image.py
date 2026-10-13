@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Demo pola ECB: piksel gambar grayscale dienkripsi di 5 mode lalu ditampilkan ulang.
 
-Pakai: python3 analysis/ecb_image.py <path_cipher_cli> <dir_keluaran>
-Keluaran: <dir_keluaran>/samples/gambar.png dan <dir_keluaran>/ecb_image/<mode>.png
+python3 analysis/ecb_image.py <path_cipher_cli> <dir_output>
+-> <dir_keluaran>/samples/gambar.png dan <dir_output>/ecb_image/<mode>.png
 """
 import os
 import struct

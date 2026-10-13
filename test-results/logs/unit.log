@@ -23,6 +23,14 @@ ALL TESTS PASSED
 g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_permutation.cpp -o build/test_permutation
 == test_permutation
 PASS
+== test_round_f
+--- Unit Test round_f ---
+F dapat dibalik untuk 100000 dari 100000 pasangan (R, K) acak
+Tabrakan keluaran F pada 100000 masukan acak (kunci tetap): 0
+Bit keluaran F yang berubah untuk 1 bit masukan: rata-rata 19.77, per posisi min 15.03 max 24.51 (dari 64)
+
+Test Summary: 5 passed, 0 failed.
+ALL TESTS PASSED
 g++ -std=c++17 -Wall -Wextra -pedantic -Iinclude -Itests -fopenmp src/core/cipher.cpp src/core/key_schedule.cpp src/core/permutation.cpp src/core/round.cpp src/core/sbox.cpp src/ops/container.cpp src/ops/mac.cpp src/ops/modes.cpp src/ops/padding.cpp src/util/bytes.cpp src/util/file_io.cpp src/util/hex.cpp src/util/random.cpp tests/test_roundtrip.cpp -o build/test_roundtrip
 == test_roundtrip
 PASS

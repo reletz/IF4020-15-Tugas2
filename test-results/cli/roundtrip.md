@@ -1,9 +1,10 @@
-# Round-trip CLI berkas uji
+# Round-trip CLI
 
-Kunci: `000102030405060708090a0b0c0d0e0f`, IV/counter awal: `0f0e0d0c0b0a09080706050403020100` (ECB tanpa IV).
-Ukuran kontainer = 22 (header) + payload + 16 (tag CMAC).
+Key: `000102030405060708090a0b0c0d0e0f`
+IV/counter awal: `0f0e0d0c0b0a09080706050403020100` (ECB tanpa IV).
+Ukuran container = 22 (header) + payload + 16 (tag CMAC).
 
-| Berkas | Mode | Plaintext (B) | Kontainer (B) | Payload (B) | Dekripsi identik | SHA-256 plaintext (16 hex awal) |
+| Berkas | Mode | Plaintext (B) | Container (B) | Payload (B) | Dekripsi identik? | SHA-256 plaintext (16 hex awal) |
 |---|---|---|---|---|---|---|
 | teks.txt | ECB | 1116 | 1158 | 1120 | ya | `0118caf99b62bdf9` |
 | teks.txt | CBC | 1116 | 1158 | 1120 | ya | `0118caf99b62bdf9` |

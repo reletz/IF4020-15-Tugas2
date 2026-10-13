@@ -23,9 +23,9 @@
   [PASS] Multi-megabyte (2 MiB) round-trip in ctr mode
   [PASS] Inline plaintext (-t) and custom IV (--iv) round-trip
 === 2. Benchmark (16 MiB Random Binary) ===
-  Benchmark 16 MiB [CTR]: Encrypt 1.131s (14.15 MB/s) | Decrypt 1.094s (14.62 MB/s)
+  Benchmark 16 MiB [CTR]: Encrypt 1.541s (10.38 MB/s) | Decrypt 1.731s (9.25 MB/s)
   [PASS] Benchmark 16 MiB round-trip verified in ctr mode
-  Benchmark 16 MiB [CBC]: Encrypt 1.790s (8.94 MB/s) | Decrypt 1.086s (14.74 MB/s)
+  Benchmark 16 MiB [CBC]: Encrypt 3.046s (5.25 MB/s) | Decrypt 1.770s (9.04 MB/s)
   [PASS] Benchmark 16 MiB round-trip verified in cbc mode
 === 3. Negative Tests & Tamper Resistance ===
   [PASS] 1-bit tamper on Magic byte 0 in ecb mode

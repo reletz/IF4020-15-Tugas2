@@ -1,5 +1,260 @@
 \section{Analisis Keamanan}
+Bab ini memaparkan hasil pengujian \algname{} sesuai spesifikasi: avalanche effect, entropi, dan
+histogram, masing-masing pada kelima mode operasi, ditambah beberapa pengujian lain. Seluruh data
+uji memakai \textit{seed} tetap sehingga hasilnya dapat direproduksi dengan \texttt{make results}.
+Berkas log, CSV, dan grafik berada di folder \texttt{test-results/}.
+
 \subsection{Avalanche Effect}
+\textit{Avalanche effect} mengukur persentase bit cipherteks yang berubah ketika satu bit
+plainteks atau satu bit kunci dibalik. Nilai ideal adalah 50\%.
+
+\paragraph{Satu blok.} Pada tiap percobaan dipilih kunci dan plainteks acak, lalu 128 bit
+plainteks dan 128 bit kunci dibalik satu per satu dan dibandingkan dengan cipherteks semula.
+\textit{Strict avalanche criterion} (SAC) melakukan pengujian dengan lebih ketat, di mana
+untuk setiap pasangan bit \textit{input} dan bit \textit{output}, dihitung peluang bit \textit{output} ikut 
+berubah, yang seharusnya 50\% pada seluruh $128 \times 128$ pasangan, bukan hanya rata-ratanya.
+
+\begin{table}[H]
+  \centering
+  \caption{Avalanche dan SAC pada satu blok}
+  \begin{tabular}{lccc}
+    \toprule
+    Uji & Percobaan & Rata-rata & Rentang \\
+    \midrule
+    1 bit plainteks & $1000 \times 128$ & 49,99\% & 27,34--69,53\% \\
+    1 bit kunci & $1000 \times 128$ & 49,99\% & 28,91--68,75\% \\
+    SAC plainteks $\to$ cipherteks & 2000 & 50,00\% & 45,75--54,30\% \\
+    SAC kunci $\to$ cipherteks & 2000 & 49,99\% & 45,70--54,20\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Rata-rata mendekati 50\%. Rentang min--maks pada uji pertama dan kedua adalah sebaran per
+percobaan tunggal dan wajar untuk 128 bit. Pada SAC, tidak ada sel di luar $4\sigma$ dari 16.384
+sel (data acak murni diperkirakan menghasilkan sekitar satu sel), sehingga tidak ada pasangan bit
+\textit{input} dan \textit{output} yang bias.
+
+\paragraph{Per jumlah putaran.} Pengujian yang sama diulang dengan membatasi cipher pada $r$
+putaran (500 percobaan per $r$).
+
+\begin{table}[H]
+  \centering
+  \caption{Avalanche rata-rata terhadap jumlah putaran}
+  \begin{tabular}{ccc}
+    \toprule
+    Putaran & 1 bit plainteks & 1 bit kunci \\
+    \midrule
+    1 & 8,48\% & 21,15\% \\
+    2 & 28,32\% & 46,14\% \\
+    3 & 45,21\% & 49,97\% \\
+    4 & 49,98\% & 49,99\% \\
+    5 & 50,00\% & 50,00\% \\
+    6 & 50,00\% & 49,97\% \\
+    16 & 49,99\% & 50,00\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Difusi penuh tercapai pada putaran ke-4 untuk plainteks dan putaran ke-3 untuk kunci. Dengan 16
+putaran, terdapat margin sekitar empat kali lipat dari titik itu. Lambatnya putaran pertama sesuai
+dengan sifat fungsi $F$: satu pemanggilan $F$ hanya mengubah rata-rata sekitar 20 dari 64 bit
+\textit{output} untuk perubahan 1 bit \textit{input} (Subbab~\ref{sec:uji-f}), karena \textit{carry}
+penjumlahan hanya merambat ke bit yang lebih tinggi, dan pada struktur Feistel hanya separuh
+blok yang berubah per putaran.
+
+\paragraph{Per mode operasi.} Pengujian memakai pesan 64 blok (500 percobaan per mode).
+Satu bit plainteks atau satu bit kunci/IV dibalik, lalu diukur persentase bit cipherteks yang
+berubah pada blok yang sama, blok sebelumnya, dan blok sesudahnya.
+
+\begin{table}[H]
+  \centering
+  \caption{Avalanche per mode operasi}
+  \begin{tabular}{lccccc}
+    \toprule
+    Mode & Blok sebelum & Blok yang sama & Blok sesudah & 1 bit kunci & 1 bit IV \\
+    \midrule
+    ECB & 0\% & 50,16\% & 0\% & 49,98\% & tidak dipakai \\
+    CBC & 0\% & 49,71\% & 50,01\% & 50,02\% & 49,96\% \\
+    CFB & 0\% & 0,78\% & 49,93\% & 49,99\% & 50,00\% \\
+    OFB & 0\% & 0,78\% & 0\% & 49,99\% & 49,97\% \\
+    CTR & 0\% & 0,78\% & 0\% & 49,95\% & 49,98\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Pada CFB, OFB, dan CTR, perubahan 1 bit plainteks hanya membalik 1 bit cipherteks di posisi yang
+sama (0,78\% = 1/128). Ini merupakan sifat mode yang meng-XOR-kan plainteks dengan \textit{keystream}.
+Perubahan 1 bit kunci atau IV tetap mengubah sekitar 50\% seluruh cipherteks di
+semua mode. CBC dan CFB menyebarkan perubahan plainteks ke blok sesudahnya (sekitar 50\%), sedangkan
+ECB membatasinya pada blok yang sama.
+
 \subsection{Entropi}
+Entropi Shannon byte cipherteks bernilai maksimum 8 bit/byte jika seluruh 256 nilai byte
+muncul sama sering. Selain entropi, uji $\chi^2$ dengan 255 derajat kebebasan dipakai untuk menilai
+keseragaman: data seragam bernilai sekitar $255 \pm 45$ dan dianggap lolos jika $p \ge 0{,}05$.
+Tiap input berukuran 1~MiB dan hasilnya merupakan rata-rata dari 10 kunci dan IV.
+
+\begin{table}[H]
+  \centering
+  \caption{Entropi (bit/byte) dan $\chi^2$ pada input 1~MiB}
+  \resizebox{\textwidth}{!}{%
+  \begin{tabular}{llrrrrrr}
+    \toprule
+    Input & Ukuran & Plainteks & ECB & CBC & CFB & OFB & CTR \\
+    \midrule
+    Teks berulang & Entropi & 4,2176 & 7,9693 & 7,9998 & 7,9998 & 7,9998 & 7,9998 \\
+                  & $\chi^2$ & 16.788.100 & 44.315 & 250,4 & 267,0 & 258,9 & 255,8 \\
+    Semua nol     & Entropi & 0,0000 & 3,9205 & 7,9998 & 7,9998 & 7,9998 & 7,9998 \\
+                  & $\chi^2$ & 267.386.880 & 17.196.378 & 239,0 & 255,9 & 250,5 & 259,6 \\
+    Pola 0..255   & Entropi & 8,0000 & 7,1834 & 7,9998 & 7,9998 & 7,9998 & 7,9998 \\
+                  & $\chi^2$ & 0,0 & 1.040.368 & 262,6 & 241,0 & 253,7 & 258,9 \\
+    \bottomrule
+  \end{tabular}}
+\end{table}
+
+\begin{itemize}
+  \item CBC, CFB, OFB, dan CTR menghasilkan cipherteks yang secara statistik seragam pada ketiga
+    input, dengan entropi 7,9998 bit/byte. Dari 120 percobaan (4 mode $\times$ 3 input $\times$
+    10 kunci), 113 lolos uji $\chi^2$ pada tingkat 5\% (5,8\% gagal), sesuai harapan untuk data
+    acak yang memang gagal sekitar 5\% secara kebetulan.
+  \item ECB gagal pada semua input berpola karena blok plainteks yang sama menghasilkan blok
+    cipherteks yang sama. Persentase blok 16 byte yang unik pada ECB tetap di bawah 0,6\%, sedangkan
+    mode lain 100\%.
+  \item Input ``pola 0..255'' menunjukkan bahwa entropi saja tidak cukup: plainteksnya memiliki
+    entropi 8,0 (semua byte muncul sama sering) padahal sama sekali tidak acak. Uji $\chi^2$ dan
+    keunikan blok menangkap hal ini.
+\end{itemize}
+
 \subsection{Histogram}
+Gambar~\ref{fig:hist-teks} sampai Gambar~\ref{fig:hist-pola} membandingkan sebaran frekuensi byte
+plainteks dengan cipherteks pada kelima mode untuk tiga input. Garis putus-putus merah menandai
+frekuensi seragam ($n/256$).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{hist_teks.pdf}
+  \caption{Histogram byte, input teks berulang}\label{fig:hist-teks}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{hist_nol.pdf}
+  \caption{Histogram byte, input semua nol}\label{fig:hist-nol}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{hist_pola.pdf}
+  \caption{Histogram byte, input pola 0..255}\label{fig:hist-pola}
+\end{figure}
+
+Plainteks terkonsentrasi pada beberapa nilai byte, sedangkan cipherteks CBC, CFB, OFB, dan CTR
+mendekati distribusi \textit{uniform} pada ketiga input. Histogram ECB masih menyimpang dari seragam
+(pada input teks terlihat gundukan, pada input semua nol hanya sedikit nilai byte yang muncul)
+karena struktur plainteks masih terbawa ke cipherteks.
+
 \subsection{Pengujian Tambahan}
+
+\paragraph{Properti fungsi $F$.}\label{sec:uji-f} Pengujian \texttt{tests/test\_round\_f.cpp} dilakukan untuk
+menelaah sifat fungsi $F$ pada implementasi ini.
+
+\begin{table}[H]
+  \centering
+  \caption{Properti fungsi $F$ (kunci tertentu)}
+  \begin{tabular}{p{7.3cm}p{6.7cm}}
+    \toprule
+    Uji & Hasil \\
+    \midrule
+    $F$ \textit{invertible} ($F^{-1}(F(R,K)) = R$) & 100.000 dari 100.000 pasangan $(R, K)$ \\
+    Tabrakan \textit{output}, 100.000 \textit{input} acak & 0 \\
+    Bit \textit{output} berubah untuk 1 bit \textit{input} (rata-rata) & 19,77 dari 64 \\
+    \quad per posisi bit \textit{input} (min--maks) & 15,03--24,51 dari 64 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Hasil ini menunjukkan bahwa $F$ pada implementasi ini tidak kehilangan informasi, meskipun
+terinspirasi dari modulator sigma-delta yang bersifat \textit{lossy} (kuantisasi diganti
+\textit{S-box} bijektif). Difusi satu pemanggilan $F$ sekitar 31\%, jauh di bawah 50\%, dan
+difusi penuh baru dicapai lewat putaran berulang seperti pada Tabel avalanche per putaran.
+
+\paragraph{Demo mode pada gambar.} Gambar grayscale $256 \times 256$ (1 byte per piksel, sehingga
+1 blok = 16 piksel) dienkripsi pada tiap mode, lalu cipherteksnya ditampilkan kembali sebagai
+gambar.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{plain.png}\caption{Plainteks}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{ecb.png}\caption{ECB}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{cbc.png}\caption{CBC}
+  \end{subfigure}
+
+  \medskip
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{cfb.png}\caption{CFB}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{ofb.png}\caption{OFB}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[width=\textwidth]{ctr.png}\caption{CTR}
+  \end{subfigure}
+  \caption{Gambar yang sama dienkripsi pada kelima mode}\label{fig:ecb-image}
+\end{figure}
+
+Bentuk gambar masih terlihat pada ECB, sedangkan keempat mode lain tampak seperti derau.
+
+\paragraph{Verifikasi integritas.} Pada pengujian lewat CLI, cipherteks yang dibalik 1 bit, kunci
+yang salah, dan kontainer yang terpotong semuanya ditolak tanpa menghasilkan berkas \textit{output}
+(kode keluar 4 untuk dua kasus pertama dan 3 untuk kontainer terpotong). Pengujian ini dilakukan
+pada tiga lapis:
+\begin{itemize}
+  \item skenario CLI pada \path{tests/run_all.sh}; hasilnya ada pada berkas
+    \path{cli/roundtrip.md} di \texttt{test-results};
+  \item uji \textit{end-to-end} \texttt{tests/e2e.sh}, yang membalik 1 bit pada \textit{magic}, IV,
+    cipherteks, dan \textit{tag} untuk tiap mode, serta menguji kunci salah dan kontainer terpotong
+    (60 pemeriksaan, log di \texttt{test-results/logs/e2e.log});
+  \item uji unit \texttt{tests/test\_container.cpp}, yang membalik setiap bit pada kontainer satu
+    per satu dan memastikan semuanya ditolak.
+\end{itemize}
+
+\paragraph{Kecepatan serial dan paralel.} Mode yang dapat diparalelkan (ECB, dekripsi CBC dan CFB,
+serta CTR) diuji dengan data 64~MiB pada 16 \textit{thread}. \textit{Output} paralel identik dengan serial
+pada seluruh pengujian.
+
+\begin{table}[H]
+  \centering
+  \caption{Kecepatan serial dan paralel, data 64~MiB (median 5 kali)}
+  \begin{tabular}{llccc}
+    \toprule
+    Mode & Arah & Serial (MiB/s) & Paralel (MiB/s) & Speedup \\
+    \midrule
+    ECB & enkripsi & 16,44 & 128,96 & 7,84$\times$ \\
+    ECB & dekripsi & 16,14 & 128,85 & 7,98$\times$ \\
+    CBC & enkripsi & 16,09 & 15,94 & 0,99$\times$ \\
+    CBC & dekripsi & 15,28 & 130,30 & 8,53$\times$ \\
+    CFB & enkripsi & 16,54 & 16,24 & 0,98$\times$ \\
+    CFB & dekripsi & 16,80 & 131,25 & 7,81$\times$ \\
+    OFB & enkripsi & 14,97 & 15,85 & 1,06$\times$ \\
+    CTR & enkripsi & 16,34 & 127,83 & 7,82$\times$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Enkripsi CBC, CFB, dan OFB tidak dapat diparalelkan karena setiap blok bergantung pada blok
+sebelumnya, sehingga \textit{speedup}-nya sekitar 1$\times$ (selisih kecil dari 1 berasal dari
+ukuran pengukuran). Pengukuran dilakukan pada Intel Core i5-12500H
+(Arch Linux, g++ 16.2.1, \texttt{-O2}).
+
+\paragraph{Kualitas \textit{S-box}.} \textit{S-box} bijektif, tanpa titik tetap, dengan
+\textit{nonlinearity} 98 dan \textit{differential uniformity} 10 (rincian dan pembanding AES pada
+Bab~3). Nilai ini dihitung oleh \texttt{tools/analyze\_sbox.cpp} (\texttt{make analyze}, log di
+\texttt{test-results/logs/sbox.log}), yang tertulis $\max|W_S| = 60$, probabilitas
+diferensial maksimum $10/256$, dan bias linear maksimum $60/512$. 
+Nilai ini berada dalam batas wajar untuk \textit{S-box} acak terpilih
+dan lebih lemah dari \textit{S-box} AES. 

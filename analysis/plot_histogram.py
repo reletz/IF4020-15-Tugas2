@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Grafik histogram SVG (plaintext dan 5 mode) dari hasil mode_analysis.
 
-Pakai: python3 analysis/plot_histogram.py <dir_data> <dir_keluaran>
+python3 analysis/plot_histogram.py <dir_data> <dir_output>
 """
 import csv
 import glob

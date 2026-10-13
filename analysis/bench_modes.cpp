@@ -55,14 +55,14 @@ struct Op {
 
 /// Daftar operasi yang dibenchmark (mode × arah enkripsi/dekripsi).
 static const Op OPS[] = {
-    {"ECB", "enc", modes::ecb_encrypt, nullptr, "paralel"},
-    {"ECB", "dec", modes::ecb_decrypt, modes::ecb_encrypt, "paralel"},
-    {"CBC", "enc", modes::cbc_encrypt, nullptr, "serial (definisi)"},
-    {"CBC", "dec", modes::cbc_decrypt, modes::cbc_encrypt, "paralel"},
-    {"CFB", "enc", modes::cfb_encrypt, nullptr, "serial (definisi)"},
-    {"CFB", "dec", modes::cfb_decrypt, modes::cfb_encrypt, "paralel"},
-    {"OFB", "enc", modes::ofb_crypt, nullptr, "serial (definisi)"},
-    {"CTR", "enc", modes::ctr_crypt, nullptr, "paralel"},
+    {"ECB", "enc", modes::ecb_encrypt, nullptr, "parallel"},
+    {"ECB", "dec", modes::ecb_decrypt, modes::ecb_encrypt, "parallel"},
+    {"CBC", "enc", modes::cbc_encrypt, nullptr, "serial (by definition)"},
+    {"CBC", "dec", modes::cbc_decrypt, modes::cbc_encrypt, "parallel"},
+    {"CFB", "enc", modes::cfb_encrypt, nullptr, "serial (by definition)"},
+    {"CFB", "dec", modes::cfb_decrypt, modes::cfb_encrypt, "parallel"},
+    {"OFB", "enc", modes::ofb_crypt, nullptr, "serial (by definition)"},
+    {"CTR", "enc", modes::ctr_crypt, nullptr, "parallel"},
 };
 
 /// State PRNG. Seed tetap supaya hasil uji bisa direproduksi.
@@ -193,24 +193,24 @@ int main(int argc, char **argv) {
 
   // Info mesin. Pada mode CSV dikirim ke stderr supaya file CSV tetap bersih.
   FILE *info = csv ? stderr : stdout;
-  fprintf(info, "Benchmark mode operasi (median dari %d run, tanpa I/O dan CMAC)\n", reps);
+  fprintf(info, "Mode operation benchmark (median of %d runs, excluding I/O and CMAC)\n", reps);
   fprintf(info, "CPU      : %s\n", cpu_name().c_str());
 #ifdef _OPENMP
-  fprintf(info, "Thread   : %d paralel (omp_get_num_procs = %d), OpenMP %d\n",
+  fprintf(info, "Threads  : %d parallel (omp_get_num_procs = %d), OpenMP %d\n",
           threads, omp_get_num_procs(), _OPENMP);
 #else
-  fprintf(info, "Thread   : 1 (build tanpa OpenMP, kolom paralel == serial)\n");
+  fprintf(info, "Threads  : 1 (built without OpenMP, parallel column == serial)\n");
 #endif
 #ifdef __VERSION__
   fprintf(info, "Compiler : %s%s\n", __VERSION__,
 #ifdef __OPTIMIZE__
-          ", optimasi aktif (-O2)"
+          ", optimizations on (-O2)"
 #else
-          ", TANPA optimasi"
+          ", NO optimization"
 #endif
   );
 #endif
-  fprintf(info, "Threshold: %zu blok (%zu KiB) sebelum paralel aktif\n\n",
+  fprintf(info, "Threshold: %zu blocks (%zu KiB) before going parallel\n\n",
           modes::PARALLEL_THRESHOLD_BLOCKS,
           modes::PARALLEL_THRESHOLD_BLOCKS * BLOCK_SIZE / 1024);
 
@@ -222,8 +222,8 @@ int main(int argc, char **argv) {
   if (csv) {
     printf("mode,op,size_mib,serial_mibps,parallel_mibps,speedup,threads,identical\n");
   } else {
-    printf("%-4s %-3s %8s %14s %15s %8s %7s %7s  %s\n", "mode", "op", "ukuran",
-           "serial MiB/s", "paralel MiB/s", "speedup", "thread", "identik", "keterangan");
+    printf("%-4s %-3s %8s %14s %15s %8s %7s %9s  %s\n", "mode", "op", "size",
+           "serial MiB/s", "parallel MiB/s", "speedup", "threads", "identical", "note");
     printf("------------------------------------------------------------------------------------------\n");
   }
 
@@ -251,16 +251,16 @@ int main(int argc, char **argv) {
         printf("%s,%s,%zu,%.2f,%.2f,%.2f,%d,%s\n", op.mode, op.dir, mib, s_rate,
                p_rate, ts / tp, threads, identical ? "yes" : "no");
       } else {
-        printf("%-4s %-3s %4zu MiB %14.2f %15.2f %7.2fx %7d %7s  %s\n", op.mode,
+        printf("%-4s %-3s %4zu MiB %14.2f %15.2f %7.2fx %7d %9s  %s\n", op.mode,
                op.dir, mib, s_rate, p_rate, ts / tp, threads,
-               identical ? "ya" : "TIDAK", op.note);
+               identical ? "yes" : "NO", op.note);
       }
       fflush(stdout);
     }
   }
 
   if (!all_identical) {
-    fprintf(stderr, "PERINGATAN: ada output paralel yang berbeda dari serial\n");
+    fprintf(stderr, "WARNING: some parallel outputs differ from the serial output\n");
     return 1;
   }
   return 0;

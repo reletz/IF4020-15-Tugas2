@@ -1,6 +1,7 @@
-Benchmark mode operasi (median dari 5 run, tanpa I/O dan CMAC)
-CPU      : AMD Ryzen 5 4600H with Radeon Graphics
-Thread   : 12 paralel (omp_get_num_procs = 12), OpenMP 201511
-Compiler : 13.3.0, optimasi aktif (-O2)
-Threshold: 1024 blok (16 KiB) sebelum paralel aktif
-Lingkungan: WSL2 Ubuntu, dihasilkan dengan `make bench-csv`
+Mode operation benchmark (median of 5 runs, excluding I/O and CMAC)
+CPU      : 12th Gen Intel(R) Core(TM) i5-12500H
+Threads  : 16 parallel (omp_get_num_procs = 16), OpenMP 202111
+Compiler : 16.2.1 20260810, optimizations on (-O2)
+Threshold: 1024 blocks (16 KiB) before going parallel
+
+Environment: Arch Linux (native), generated with `./build/bench_modes --csv`

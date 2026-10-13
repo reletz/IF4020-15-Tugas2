@@ -195,7 +195,7 @@ membawa akumulator $a$ dan umpan balik $q_{\text{prev}}$:
   q &= S_{32}(a \oplus k), \\
   q_{\text{prev}} &\leftarrow q,
 \end{align*}
-dengan $S_{32}$ substitusi tiap byte memakai \textit{S-box}. Keluaran langkah ini adalah $q$.
+dengan $S_{32}$ substitusi tiap byte memakai \textit{S-box}. \textit{Output} langkah ini adalah $q$.
 Nilai awal $a$ dan $q_{\text{prev}}$ adalah 0 pada tiap \textit{pass}.
 
 \paragraph{Urutan fungsi $F$.}
@@ -230,5 +230,5 @@ Nilai awal $a$ dan $q_{\text{prev}}$ adalah 0 pada tiap \textit{pass}.
 Rancangan ini hanya terinspirasi oleh modulator sigma-delta, bukan benar-benar \textit{copy one-to-one}. Kuantisasi 
 aslinya membuang resolusi, yang cocok untuk DAC, tetapi tidak untuk cipher (menganggu \textit{integrity}). Sehingga, 
 pada rancangan ini, diganti dengan \textit{S-box} bijektif. Yang dipertahankan adalah sifat bahwa tiap
-keluaran bergantung pada seluruh masukan sebelumnya melalui state yang dibawa, mirip mode CBC
+\textit{output} bergantung pada seluruh \textit{input} sebelumnya melalui state yang dibawa, mirip mode CBC
 atau CFB tempat satu blok bergantung pada blok sebelumnya.
