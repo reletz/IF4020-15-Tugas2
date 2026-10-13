@@ -5,5 +5,5 @@ var searchData=
   ['dan_20padding_2',['Mode operasi dan padding',['../index.html#autotoc_md8',1,'']]],
   ['deskripsi_20api_3',['1. Deskripsi API',['../index.html#autotoc_md0',1,'']]],
   ['dipakai_20cli_4',['Kontainer terautentikasi (yang dipakai CLI)',['../index.html#autotoc_md9',1,'']]],
-  ['dokumentasi_20api_20nama_5falgoritma_5',['Dokumentasi API NAMA_ALGORITMA',['../index.html',1,'']]]
+  ['dokumentasi_20api_20cipher_20fayadh_5',['Dokumentasi API Cipher Fayadh',['../index.html',1,'']]]
 ];

@@ -1,4 +1,4 @@
-PROJECT_NAME           = "NAMA_ALGORITMA"
+PROJECT_NAME           = "Cipher Fayadh"
 PROJECT_BRIEF          = "Block cipher Feistel 128-bit dengan fungsi putaran sigma-delta"
 OUTPUT_DIRECTORY       = build
 INPUT_ENCODING         = UTF-8

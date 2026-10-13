@@ -24,8 +24,8 @@
 */
 var NAVTREE =
 [
-  [ "NAMA_ALGORITMA", "index.html", [
-    [ "Dokumentasi API NAMA_ALGORITMA", "index.html", "index" ],
+  [ "Cipher Fayadh", "index.html", [
+    [ "Dokumentasi API Cipher Fayadh", "index.html", "index" ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],

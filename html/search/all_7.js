@@ -11,5 +11,5 @@ var searchData=
   ['diff_5fbits_8',['diff_bits',['../mode__analysis_8cpp.html#aa2d3e05fc1326a930f3daf7b1ddf5fbe',1,'diff_bits(const uint8_t *a, const uint8_t *b, size_t n):&#160;mode_analysis.cpp'],['../rounds_8cpp.html#afeb4cc39c3329d255f8558b146cea5f1',1,'diff_bits(const uint8_t *a, const uint8_t *b):&#160;rounds.cpp']]],
   ['dipakai_20cli_9',['Kontainer terautentikasi (yang dipakai CLI)',['../index.html#autotoc_md9',1,'']]],
   ['dir_10',['dir',['../structOp.html#af5226e84395a3b2957f09341ab07ae9d',1,'Op']]],
-  ['dokumentasi_20api_20nama_5falgoritma_11',['Dokumentasi API NAMA_ALGORITMA',['../index.html',1,'']]]
+  ['dokumentasi_20api_20cipher_20fayadh_11',['Dokumentasi API Cipher Fayadh',['../index.html',1,'']]]
 ];

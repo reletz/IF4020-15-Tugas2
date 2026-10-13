@@ -1,4 +1,4 @@
-# NAMA_ALGORITMA
+# Cipher Fayadh
 
 Block cipher 128-bit rancangan Kelompok 15 untuk Tugas 2 IF4020 Kriptografi ITB 2026/2027 ("Membuat Block
 Cipher Baru"), lengkap dengan aplikasi CLI untuk mengenkripsi dan mendekripsi berkas apa pun di lima mode
